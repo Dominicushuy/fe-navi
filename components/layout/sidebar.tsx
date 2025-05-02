@@ -1,13 +1,13 @@
+// components/layout/sidebar.tsx
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   Calendar,
   Settings,
-  Wrench,
   RotateCcw,
   ChevronDown,
   ChevronRight,
@@ -43,20 +43,15 @@ const navItems: NavItem[] = [
     icon: <Settings className='size-5' />,
   },
   {
-    title: 'Maintenance',
-    href: '/maintenance',
-    icon: <Wrench className='size-5' />,
-  },
-  {
     title: 'History',
     icon: <RotateCcw className='size-5' />,
     children: [
       {
-        title: 'Execution history',
+        title: 'Execution',
         href: '/history/execution',
       },
       {
-        title: 'Setting change history',
+        title: 'Setting change',
         href: '/history/setting-change',
       },
     ],
@@ -85,16 +80,40 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname()
 
-  // Check if the current path matches or starts with the given href
+  // Define the isActive function before using it in hasActiveChild
   const isActive = (href?: string) => {
     if (!href) return false
     return pathname === href || pathname.startsWith(href)
   }
 
-  // Check if any child item is active
+  // Define hasActiveChild before using it in useState
   const hasActiveChild = (item: NavItem) => {
     if (!item.children) return false
     return item.children.some((child) => isActive(child.href))
+  }
+
+  // State to track which sections are open
+  const [openSections, setOpenSections] = useState<Record<number, boolean>>(
+    () => {
+      const initialState: Record<number, boolean> = {}
+
+      // Initialize based on which items have active children
+      navItems.forEach((item, index) => {
+        if (item.children && hasActiveChild(item)) {
+          initialState[index] = true
+        }
+      })
+
+      return initialState
+    }
+  )
+
+  // Toggle a section open/closed
+  const toggleSection = (index: number) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }))
   }
 
   return (
@@ -121,7 +140,10 @@ export function Sidebar() {
           {navItems.map((item, index) => (
             <li key={index}>
               {item.children ? (
-                <Collapsible defaultOpen={hasActiveChild(item)}>
+                <Collapsible
+                  defaultOpen={hasActiveChild(item)}
+                  open={openSections[index]}
+                  onOpenChange={() => toggleSection(index)}>
                   <CollapsibleTrigger
                     className={cn(
                       'flex items-center justify-between w-full px-4 py-2 text-left rounded-md',
@@ -133,13 +155,12 @@ export function Sidebar() {
                       {item.icon}
                       <span>{item.title}</span>
                     </span>
-                    {({ open }) =>
-                      open ? (
-                        <ChevronDown className='size-4' />
-                      ) : (
-                        <ChevronRight className='size-4' />
-                      )
-                    }
+                    {/* Use conditional rendering instead of function */}
+                    {openSections[index] ? (
+                      <ChevronDown className='size-4' />
+                    ) : (
+                      <ChevronRight className='size-4' />
+                    )}
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <ul className='pl-6 mt-1 space-y-1'>
