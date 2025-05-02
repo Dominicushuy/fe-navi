@@ -51,8 +51,6 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -68,19 +66,10 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-
-  /* Other variables remain unchanged */
+  
+  /* Primary color palette in hex format */
   --primary: #1b5e20;
   --primary-foreground: #ffffff;
-  /* Add the shades as custom properties */
   --primary-50: #e8f5e9;
   --primary-100: #c8e6c9;
   --primary-200: #a5d6a7;
@@ -92,6 +81,16 @@
   --primary-800: #2e7d32;
   --primary-900: #1b5e20;
   --primary-950: #003300;
+  
+  /* Sidebar specific colors */
+  --sidebar: var(--primary-950);
+  --sidebar-foreground: var(--primary-50);
+  --sidebar-primary: var(--primary-700);
+  --sidebar-primary-foreground: var(--primary-50);
+  --sidebar-accent: var(--primary-800);
+  --sidebar-accent-foreground: var(--primary-100);
+  --sidebar-border: var(--primary-800);
+  --sidebar-ring: var(--primary-400);
 }
 
 .dark {
@@ -101,8 +100,6 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -118,18 +115,31 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-
-  /* Other variables remain unchanged */
-  --primary: #4caf50; /* Using 500 for dark mode for better contrast */
+  
+  /* Dark mode primary colors */
+  --primary: #4caf50;
   --primary-foreground: #ffffff;
+  --primary-50: #f1f8e9;
+  --primary-100: #dcedc8;
+  --primary-200: #c5e1a5;
+  --primary-300: #aed581;
+  --primary-400: #9ccc65;
+  --primary-500: #8bc34a;
+  --primary-600: #7cb342;
+  --primary-700: #689f38;
+  --primary-800: #558b2f;
+  --primary-900: #33691e;
+  --primary-950: #1a3409;
+  
+  /* Dark mode sidebar colors */
+  --sidebar: var(--primary-950);
+  --sidebar-foreground: var(--primary-50);
+  --sidebar-primary: var(--primary-700);
+  --sidebar-primary-foreground: var(--primary-50);
+  --sidebar-accent: var(--primary-800);
+  --sidebar-accent-foreground: var(--primary-100);
+  --sidebar-border: var(--primary-800);
+  --sidebar-ring: var(--primary-400);
 }
 
 @layer base {
