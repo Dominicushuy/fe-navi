@@ -1,7 +1,7 @@
 // components/layout/sidebar.tsx
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -80,33 +80,33 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname()
 
-  // Define the isActive function before using it in hasActiveChild
+  // Initialize with empty state first
+  const [openSections, setOpenSections] = useState<Record<number, boolean>>({})
+
+  // Check if the current path matches or starts with the given href
   const isActive = (href?: string) => {
     if (!href) return false
     return pathname === href || pathname.startsWith(href)
   }
 
-  // Define hasActiveChild before using it in useState
+  // Check if any child item is active
   const hasActiveChild = (item: NavItem) => {
     if (!item.children) return false
     return item.children.some((child) => isActive(child.href))
   }
 
-  // State to track which sections are open
-  const [openSections, setOpenSections] = useState<Record<number, boolean>>(
-    () => {
-      const initialState: Record<number, boolean> = {}
+  // Set initial state after component is mounted
+  useEffect(() => {
+    const initialState: Record<number, boolean> = {}
 
-      // Initialize based on which items have active children
-      navItems.forEach((item, index) => {
-        if (item.children && hasActiveChild(item)) {
-          initialState[index] = true
-        }
-      })
+    navItems.forEach((item, index) => {
+      if (item.children && hasActiveChild(item)) {
+        initialState[index] = true
+      }
+    })
 
-      return initialState
-    }
-  )
+    setOpenSections(initialState)
+  }, [pathname]) // Re-run when pathname changes
 
   // Toggle a section open/closed
   const toggleSection = (index: number) => {
@@ -155,7 +155,6 @@ export function Sidebar() {
                       {item.icon}
                       <span>{item.title}</span>
                     </span>
-                    {/* Use conditional rendering instead of function */}
                     {openSections[index] ? (
                       <ChevronDown className='size-4' />
                     ) : (
