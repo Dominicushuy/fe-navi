@@ -1,7 +1,8 @@
 'use client'
 
 import { ModeToggle } from '@/components/mode-toggle'
-import { usePathname } from 'next/navigation'
+import { LanguageSwitcher } from '@/components/language-switcher'
+import { usePathname } from '@/i18n/navigation'
 import React from 'react'
 
 export function Navbar() {
@@ -24,6 +25,7 @@ export function Navbar() {
       <div className='flex h-full items-center justify-between px-6'>
         <h1 className='text-xl font-semibold'>{getPageTitle()}</h1>
         <div className='flex items-center gap-4'>
+          <LanguageSwitcher />
           <ModeToggle />
         </div>
       </div>

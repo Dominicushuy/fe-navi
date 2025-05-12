@@ -1,6 +1,35 @@
 {
+  "Common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "noResults": "No results found"
+  },
+  "Navigation": {
+    "scheduleJob": "Schedule Job",
+    "setting": "Setting",
+    "history": "History",
+    "execution": "Execution",
+    "settingChange": "Setting change",
+    "credential": "Credential",
+    "parameterStorage": "Parameter Storage",
+    "manager": "Manager",
+    "activityLog": "Activity Log"
+  },
+  "Auth": {
+    "logOut": "Log out",
+    "admin": "Admin",
+    "systemAdmin": "System Admin"
+  },
   "HomePage": {
     "title": "Hello world!",
-    "about": "Go to the about page"
+    "about": "Go to the about page",
+    "deployNow": "Deploy now",
+    "readDocs": "Read our docs",
+    "learn": "Learn",
+    "examples": "Examples",
+    "goToNextJs": "Go to nextjs.org"
+  },
+  "LanguageSwitcher": {
+    "changeLanguage": "Change language"
   }
 }

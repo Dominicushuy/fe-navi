@@ -3,9 +3,11 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Layout } from '@/components/layout'
 import { QueryProvider } from '@/components/query-provider'
-import { NextIntlClientProvider, hasLocale } from 'next-intl'
+import { NextIntlClientProvider } from 'next-intl'
 import { notFound } from 'next/navigation'
+import { hasLocale } from 'next-intl'
 import { routing } from '@/i18n/routing'
+import { getMessages } from 'next-intl/server'
 import '../globals.css'
 
 const geistSans = Geist({
@@ -28,19 +30,23 @@ export default async function LocaleLayout({
   params,
 }: {
   children: React.ReactNode
-  params: Promise<{ locale: string }>
+  params: { locale: string }
 }) {
-  // Ensure that the incoming `locale` is valid
-  const { locale } = await params
+  const { locale } = params
+
+  // Ensure that the incoming `locale` is valid using hasLocale
   if (!hasLocale(routing.locales, locale)) {
     notFound()
   }
+
+  // Get messages for the current locale
+  const messages = await getMessages()
 
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <NextIntlClientProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider
             attribute='class'
             defaultTheme='system'

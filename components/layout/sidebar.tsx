@@ -1,9 +1,7 @@
-// components/layout/sidebar.tsx
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, Link } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
 import {
   Calendar,
@@ -22,64 +20,67 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import { useTranslations } from 'next-intl'
 
 // Navigation items structure
 type NavItem = {
-  title: string
+  titleKey: string
   href?: string
   icon: React.ReactNode
   children?: Omit<NavItem, 'icon'>[]
 }
 
-// Main navigation items
-const navItems: NavItem[] = [
-  {
-    title: 'Schedule Job',
-    href: '/schedule',
-    icon: <Calendar className='size-5' />,
-  },
-  {
-    title: 'Setting',
-    href: '/setting',
-    icon: <Settings className='size-5' />,
-  },
-  {
-    title: 'History',
-    icon: <RotateCcw className='size-5' />,
-    children: [
-      {
-        title: 'Execution',
-        href: '/history/execution',
-      },
-      {
-        title: 'Setting change',
-        href: '/history/setting-change',
-      },
-    ],
-  },
-  {
-    title: 'Credential',
-    href: '/credential',
-    icon: <FileText className='size-5' />,
-  },
-  {
-    title: 'Parameter Storage',
-    icon: <Database className='size-5' />,
-    children: [
-      {
-        title: 'Manager',
-        href: '/parameter-storage/manager',
-      },
-      {
-        title: 'Activity Log',
-        href: '/parameter-storage/activity-log',
-      },
-    ],
-  },
-]
-
 export function Sidebar() {
   const pathname = usePathname()
+  const t = useTranslations('Navigation')
+  const authT = useTranslations('Auth')
+
+  // Main navigation items with translation keys
+  const navItems: NavItem[] = [
+    {
+      titleKey: 'scheduleJob',
+      href: '/schedule',
+      icon: <Calendar className='size-5' />,
+    },
+    {
+      titleKey: 'setting',
+      href: '/setting',
+      icon: <Settings className='size-5' />,
+    },
+    {
+      titleKey: 'history',
+      icon: <RotateCcw className='size-5' />,
+      children: [
+        {
+          titleKey: 'execution',
+          href: '/history/execution',
+        },
+        {
+          titleKey: 'settingChange',
+          href: '/history/setting-change',
+        },
+      ],
+    },
+    {
+      titleKey: 'credential',
+      href: '/credential',
+      icon: <FileText className='size-5' />,
+    },
+    {
+      titleKey: 'parameterStorage',
+      icon: <Database className='size-5' />,
+      children: [
+        {
+          titleKey: 'manager',
+          href: '/parameter-storage/manager',
+        },
+        {
+          titleKey: 'activityLog',
+          href: '/parameter-storage/activity-log',
+        },
+      ],
+    },
+  ]
 
   // Initialize with empty state first
   const [openSections, setOpenSections] = useState<Record<number, boolean>>({})
@@ -166,7 +167,7 @@ export function Sidebar() {
                         )}>
                         {item.icon}
                       </span>
-                      <span>{item.title}</span>
+                      <span>{t(item.titleKey)}</span>
                     </span>
                     <span className='transition-transform duration-200'>
                       {openSections[index] ? (
@@ -199,7 +200,7 @@ export function Sidebar() {
                                 'bg-sidebar-accent/60 text-sidebar-accent-foreground font-medium'
                             )}>
                             <CornerDownRight className='size-4 text-primary-400' />
-                            <span>{child.title}</span>
+                            <span>{t(child.titleKey)}</span>
                             {isActive(child.href) && (
                               <span
                                 className='absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4/5 bg-primary-400 rounded-r-md'
@@ -232,7 +233,7 @@ export function Sidebar() {
                     )}>
                     {item.icon}
                   </span>
-                  <span>{item.title}</span>
+                  <span>{t(item.titleKey)}</span>
                   {isActive(item.href) && (
                     <span
                       className='absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4/5 bg-primary-400 rounded-r-md'
@@ -254,13 +255,15 @@ export function Sidebar() {
               AD
             </div>
             <div className='flex flex-col'>
-              <span className='text-sm font-medium'>Admin User</span>
-              <span className='text-xs text-primary-300'>System Admin</span>
+              <span className='text-sm font-medium'>{authT('admin')}</span>
+              <span className='text-xs text-primary-300'>
+                {authT('systemAdmin')}
+              </span>
             </div>
           </div>
           <button
             className='p-1.5 text-primary-300 hover:text-primary-100 rounded-md transition-colors'
-            aria-label='Log out'>
+            aria-label={authT('logOut')}>
             <LogOut className='size-4' />
           </button>
         </div>
