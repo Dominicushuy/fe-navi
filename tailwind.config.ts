@@ -1,5 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  content: [
+    './app/**/*.{js,ts,jsx,tsx}',
+    './components/**/*.{js,ts,jsx,tsx}',
+    './pages/**/*.{js,ts,jsx,tsx}',
+    './public/**/*.html',
+    './styles/**/*.{css,scss,sass}',
+  ],
   theme: {
     extend: {
       colors: {
@@ -19,7 +26,23 @@ module.exports = {
           foreground: 'var(--primary-foreground)',
         },
       },
+      keyframes: {
+        slideDown: {
+          from: { height: 0, opacity: 0 },
+          to: { height: 'var(--radix-collapsible-content-height)', opacity: 1 },
+        },
+        slideUp: {
+          from: {
+            height: 'var(--radix-collapsible-content-height)',
+            opacity: 1,
+          },
+          to: { height: 0, opacity: 0 },
+        },
+      },
+      animation: {
+        slideDown: 'slideDown 200ms ease-out',
+        slideUp: 'slideUp 200ms ease-out',
+      },
     },
   },
-  // Rest of your tailwind config
 }
