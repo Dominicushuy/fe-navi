@@ -1,11 +1,75 @@
+// middleware.ts
+import { NextRequest, NextResponse } from 'next/server'
 import createMiddleware from 'next-intl/middleware'
 import { routing } from './i18n/routing'
 
-export default createMiddleware(routing)
+// Create the internationalization middleware
+const intlMiddleware = createMiddleware(routing)
 
+// Define strict matcher to prevent middleware running on unnecessary paths
 export const config = {
-  // Match all pathnames except for
-  // - … if they start with `/api`, `/trpc`, `/_next` or `/_vercel`
-  // - … the ones containing a dot (e.g. `favicon.ico`)
-  matcher: '/((?!api|trpc|_next|_vercel|.*\\..*).*)',
+  matcher: [
+    // Skip public files, API routes, and Next.js internals
+    '/((?!api|_next|_vercel|.*\\..*).*)',
+  ],
+}
+
+export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  // Simple debug logging to troubleshoot the issue
+  // console.log(`[Middleware] Path: ${pathname}`)
+
+  // 1. ALWAYS SKIP auth for login-related pages - most important fix!
+  if (pathname.includes('/login') || pathname.includes('/api/auth')) {
+    console.log('[Middleware] Login page detected, skipping auth check')
+    return intlMiddleware(request)
+  }
+
+  // 2. Check for Casso auth subdomain
+  const hostname = request.headers.get('host') || ''
+  if (hostname.startsWith('auth.')) {
+    const headers = Array.from(request.headers.entries())
+    const employeeId = headers.find(
+      ([key]) => key === 'x-amzn-oidc-identity'
+    )?.[1]
+    const cassoToken = headers.find(
+      ([key]) => key === 'x-amzn-oidc-accesstoken'
+    )?.[1]
+
+    if (employeeId && cassoToken) {
+      return NextResponse.redirect(
+        `${request.nextUrl.origin}/login-casso?employee-id=${employeeId}&casso-token=${cassoToken}`
+      )
+    }
+  }
+
+  // 3. For all other routes, check auth cookie
+  const authCookie = request.cookies.get('logged-in')
+  const isLoggedIn = authCookie?.value === 'true'
+
+  // Debug the cookie value
+  // console.log(`[Middleware] Auth cookie: ${authCookie?.value}`)
+
+  if (!isLoggedIn) {
+    // Extract locale if present
+    const segments = pathname.split('/').filter(Boolean)
+    const locale =
+      segments.length > 0 &&
+      routing.locales.includes(segments[0] as 'en' | 'jp')
+        ? (segments[0] as 'en' | 'jp')
+        : routing.defaultLocale
+
+    // Build login URL with locale
+    const loginUrl = new URL(`/${locale}/login`, request.url)
+
+    // Add the full path as callback URL
+    loginUrl.searchParams.set('callbackUrl', pathname)
+
+    console.log(`[Middleware] Redirecting to: ${loginUrl.toString()}`)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  // 4. User is authenticated, continue with locale handling
+  return intlMiddleware(request)
 }

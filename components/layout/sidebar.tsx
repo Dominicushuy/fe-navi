@@ -12,7 +12,6 @@ import {
   FileText,
   Database,
   CornerDownRight,
-  LogOut,
 } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -21,6 +20,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { useTranslations } from 'next-intl'
+import { LogoutButton } from '@/components/auth/LogoutButton'
 
 // Navigation items structure
 type NavItem = {
@@ -261,11 +261,7 @@ export function Sidebar() {
               </span>
             </div>
           </div>
-          <button
-            className='p-1.5 text-primary-300 hover:text-primary-100 rounded-md transition-colors'
-            aria-label={authT('logOut')}>
-            <LogOut className='size-4' />
-          </button>
+          <LogoutButton />
         </div>
       </div>
     </aside>

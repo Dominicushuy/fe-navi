@@ -1,14 +1,17 @@
+// app/[locale]/layout.tsx
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import { ThemeProvider } from '@/components/theme-provider'
+
 import { Layout } from '@/components/layout'
-import { QueryProvider } from '@/components/query-provider'
 import { NextIntlClientProvider } from 'next-intl'
 import { notFound } from 'next/navigation'
 import { hasLocale } from 'next-intl'
 import { routing } from '@/i18n/routing'
 import { getMessages } from 'next-intl/server'
+import { getSession } from '@/lib/auth'
 import '../globals.css'
+import { ThemeProvider } from '@/components/providers/theme-provider'
+import { QueryProvider } from '@/components/providers/query-provider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -30,9 +33,9 @@ export default async function LocaleLayout({
   params,
 }: {
   children: React.ReactNode
-  params: { locale: string }
+  params: Promise<{ locale: string }>
 }) {
-  const { locale } = params
+  const { locale } = await params
 
   // Ensure that the incoming `locale` is valid using hasLocale
   if (!hasLocale(routing.locales, locale)) {
@@ -41,6 +44,16 @@ export default async function LocaleLayout({
 
   // Get messages for the current locale
   const messages = await getMessages()
+
+  // Get the user session
+  const session = await getSession()
+  const isLoggedIn = !!session?.user
+
+  // Extract the current path from children or URL
+  // to determine if we're on a login page
+  const isLoginPage =
+    children?.toString().includes('/login') ||
+    children?.toString().includes('/login-casso')
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -53,7 +66,11 @@ export default async function LocaleLayout({
             enableSystem
             disableTransitionOnChange>
             <QueryProvider>
-              <Layout>{children}</Layout>
+              {isLoggedIn && !isLoginPage ? (
+                <Layout>{children}</Layout>
+              ) : (
+                children
+              )}
             </QueryProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

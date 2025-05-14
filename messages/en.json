@@ -16,9 +16,16 @@
     "activityLog": "Activity Log"
   },
   "Auth": {
-    "logOut": "Log out",
-    "admin": "Admin",
-    "systemAdmin": "System Admin"
+    "username": "Username",
+    "password": "Password",
+    "enterUsername": "Enter username",
+    "enterPassword": "Enter password",
+    "login": "Login",
+    "loggingIn": "Logging in...",
+    "loginError": "Login failed. Please try again.",
+    "loading": "Loading...",
+    "authInfoMissing": "Authentication information is missing",
+    "backToLogin": "Back to login"
   },
   "HomePage": {
     "title": "Hello world!",
