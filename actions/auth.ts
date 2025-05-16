@@ -1,99 +1,125 @@
 // actions/auth.ts
 'use server'
 
-import { signIn, signOut } from 'next-auth/react'
-import { DEFAULT_PAGE } from '@/constants/router'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-// Login with username/password
+/**
+ * Server action for logging in with username and password
+ */
 export async function loginWithCredentials(formData: FormData) {
-  const username = formData.get('username') as string
-  const password = formData.get('password') as string
-  const callbackUrl =
-    (formData.get('callbackUrl') as string) || `/${DEFAULT_PAGE}`
-
   try {
-    const result = await signIn('credentials', {
-      username,
-      password,
-      redirect: false,
-    })
+    const username = formData.get('username') as string
+    const password = formData.get('password') as string
+    const callbackUrl = (formData.get('callbackUrl') as string) || '/'
 
-    if (result?.error) {
+    if (!username || !password) {
       return {
         success: false,
-        error: 'ユーザー名またはパスワードが正確ではありません',
+        error: 'Username and password are required',
       }
     }
 
-    // Set the authentication cookie - with SIMPLER settings
-    const cookieStore = await cookies()
-    cookieStore.set('logged-in', 'true', {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    })
+    // Call the login API
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/auth/login`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+        // Needed for server actions to make requests to its own API routes
+        cache: 'no-store',
+      }
+    )
 
-    return { success: true, redirectUrl: callbackUrl }
+    const data = await response.json()
+
+    if (!response.ok || !data.success) {
+      return {
+        success: false,
+        error: data.error || 'Invalid credentials',
+      }
+    }
+
+    return {
+      success: true,
+      redirectUrl: callbackUrl,
+      user: data.user,
+    }
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('Authentication error:', error)
     return {
       success: false,
-      error: 'エラーが発生しました。もう一度試してください',
+      error: 'An unexpected error occurred',
     }
   }
 }
 
-// Login with Casso
+/**
+ * Server action for logging in with Casso SSO
+ */
 export async function loginWithCasso(employeeId: string, cassoToken: string) {
   try {
-    const result = await signIn('credentials', {
-      username: employeeId,
-      password: cassoToken,
-      type: 'loginCasso',
-      redirect: false,
-    })
-
-    if (result?.error) {
+    if (!employeeId || !cassoToken) {
       return {
         success: false,
-        error: 'Casso認証に失敗しました',
+        error: 'Employee ID and Casso token are required',
       }
     }
 
-    // Set the authentication cookie
-    const cookieStore = await cookies()
-    cookieStore.set('logged-in', 'true', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    })
+    // Call the Casso login API
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/auth/casso`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          'employee-id': employeeId,
+          'casso-token': cassoToken,
+        }),
+        // Needed for server actions to make requests to its own API routes
+        cache: 'no-store',
+      }
+    )
 
-    return { success: true, redirectUrl: `/${DEFAULT_PAGE}` }
+    const data = await response.json()
+
+    if (!response.ok || !data.success) {
+      return {
+        success: false,
+        error: data.error || 'Invalid Casso credentials',
+      }
+    }
+
+    return {
+      success: true,
+      redirectUrl: '/',
+      user: data.user,
+    }
   } catch (error) {
-    console.error('Casso login error:', error)
+    console.error('Casso authentication error:', error)
     return {
       success: false,
-      error: 'エラーが発生しました。もう一度試してください',
+      error: 'An error occurred during Casso authentication',
     }
   }
 }
 
-// Logout
+/**
+ * Server action for logging out
+ */
 export async function logout() {
-  // Clear the authentication cookie
-  const cookieStore = await cookies()
-  cookieStore.set('logged-in', '', {
-    path: '/',
-    expires: new Date(0),
-    maxAge: 0,
-  })
+  try {
+    // Call the logout API
+    await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/auth/logout`, {
+      method: 'POST',
+      // Needed for server actions to make requests to its own API routes
+      cache: 'no-store',
+    })
+  } catch (error) {
+    console.error('Logout error:', error)
+  }
 
-  // Sign out via auth.js
-  await signOut({ redirect: false })
-
-  // Redirect to login
+  // Redirect to login page
   redirect('/login')
 }

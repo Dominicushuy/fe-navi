@@ -8,10 +8,11 @@ import { notFound } from 'next/navigation'
 import { hasLocale } from 'next-intl'
 import { routing } from '@/i18n/routing'
 import { getMessages } from 'next-intl/server'
-import { getSession } from '@/lib/auth'
+import { isAuthenticated } from '@/lib/auth' // Use our new auth utility instead of getSession
 import '../globals.css'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { QueryProvider } from '@/components/providers/query-provider'
+import { AuthProvider } from '@/contexts/auth-context'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -45,9 +46,8 @@ export default async function LocaleLayout({
   // Get messages for the current locale
   const messages = await getMessages()
 
-  // Get the user session
-  const session = await getSession()
-  const isLoggedIn = !!session?.user
+  // Check if the user is logged in using our new auth utility
+  const isLoggedIn = await isAuthenticated()
 
   // Extract the current path from children or URL
   // to determine if we're on a login page
@@ -66,11 +66,13 @@ export default async function LocaleLayout({
             enableSystem
             disableTransitionOnChange>
             <QueryProvider>
-              {isLoggedIn && !isLoginPage ? (
-                <Layout>{children}</Layout>
-              ) : (
-                children
-              )}
+              <AuthProvider>
+                {isLoggedIn && !isLoginPage ? (
+                  <Layout>{children}</Layout>
+                ) : (
+                  children
+                )}
+              </AuthProvider>
             </QueryProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

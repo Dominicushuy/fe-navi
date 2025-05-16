@@ -1,4 +1,7 @@
 // constants/router/page.ts
+/**
+ * Default page to redirect to after login or when accessing the root path
+ */
 export const DEFAULT_PAGE = 'schedule'
 
 export const ROUTES = {

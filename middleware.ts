@@ -17,12 +17,12 @@ export const config = {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // Simple debug logging to troubleshoot the issue
-  // console.log(`[Middleware] Path: ${pathname}`)
-
-  // 1. ALWAYS SKIP auth for login-related pages - most important fix!
-  if (pathname.includes('/login') || pathname.includes('/api/auth')) {
-    console.log('[Middleware] Login page detected, skipping auth check')
+  // 1. ALWAYS SKIP auth for login-related pages and API routes
+  if (
+    pathname.includes('/login') ||
+    pathname.includes('/api/auth') ||
+    pathname.startsWith('/api/')
+  ) {
     return intlMiddleware(request)
   }
 
@@ -47,9 +47,6 @@ export async function middleware(request: NextRequest) {
   // 3. For all other routes, check auth cookie
   const authCookie = request.cookies.get('logged-in')
   const isLoggedIn = authCookie?.value === 'true'
-
-  // Debug the cookie value
-  // console.log(`[Middleware] Auth cookie: ${authCookie?.value}`)
 
   if (!isLoggedIn) {
     // Extract locale if present

@@ -32,16 +32,22 @@ export function useAuth() {
       const result = await loginWithCredentials(formData)
 
       if (result.success) {
+        // Set client-side cookie for immediate effect
+        document.cookie = `logged-in=true; path=/; max-age=${
+          60 * 60 * 24 * 7
+        }; SameSite=Lax`
+
+        // Invalidate queries to refresh data
         queryClient.invalidateQueries()
         router.push(result.redirectUrl || '/')
         router.refresh()
         return true
       } else {
-        setError(result.error || 'ログインに失敗しました')
+        setError(result.error || 'Login failed')
         return false
       }
     } catch (e) {
-      setError('エラーが発生しました。もう一度試してください')
+      setError('An error occurred. Please try again.')
       return false
     } finally {
       setIsLoading(false)
@@ -57,16 +63,22 @@ export function useAuth() {
       const result = await loginWithCasso(employeeId, cassoToken)
 
       if (result.success) {
+        // Set client-side cookie for immediate effect
+        document.cookie = `logged-in=true; path=/; max-age=${
+          60 * 60 * 24 * 7
+        }; SameSite=Lax`
+
+        // Invalidate queries to refresh data
         queryClient.invalidateQueries()
         router.push(result.redirectUrl || '/')
         router.refresh()
         return true
       } else {
-        setError(result.error || 'Casso認証に失敗しました')
+        setError(result.error || 'Casso authentication failed')
         return false
       }
     } catch (e) {
-      setError('エラーが発生しました。もう一度試してください')
+      setError('An error occurred. Please try again.')
       return false
     } finally {
       setIsLoading(false)
@@ -78,10 +90,20 @@ export function useAuth() {
     setIsLoading(true)
 
     try {
+      // Clear client-side cookie for immediate effect
+      document.cookie =
+        'logged-in=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax'
+
+      // Clear all cached queries
+      queryClient.clear()
+
+      // Call server action to logout
       await logout()
-      queryClient.clear() // Clear all cached queries
     } catch (e) {
       console.error('Logout error:', e)
+      // Fallback client-side redirect if server action fails
+      router.push('/login')
+      router.refresh()
     } finally {
       setIsLoading(false)
     }

@@ -1,14 +1,13 @@
 // components/auth/LoginForm.tsx
 'use client'
 
-import { loginWithCredentials } from '@/actions/auth'
 import { Button } from '@/components/ui/button'
-import { DEFAULT_PAGE } from '@/constants/router'
 import { Input } from '@/components/ui/input'
-import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useTransition, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { FormEvent, useState } from 'react'
+import { useAuth } from '@/contexts/auth-context'
+import { DEFAULT_PAGE } from '@/constants/router'
+import { CassoLogo, CassoLoginButton } from './CassoComponents' // Import the components
 
 // Define the translations interface
 interface Translations {
@@ -28,35 +27,26 @@ interface LoginFormProps {
 export default function LoginForm({ translations }: LoginFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const queryClient = useQueryClient()
-  const [isPending, startTransition] = useTransition()
+  const { login, isLoading, error: authError } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const isDevelopment = process.env.NODE_ENV === 'development'
 
   const callbackUrl = searchParams.get('callbackUrl') || `/${DEFAULT_PAGE}`
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
     setError(null)
 
-    startTransition(async () => {
-      const result = await loginWithCredentials(formData)
+    const form = e.currentTarget
+    const username = form.username.value
+    const password = form.password.value
 
-      if (result.success) {
-        // IMPORTANT: Set the cookie client-side as well to ensure it's available immediately
-        document.cookie = `logged-in=true; path=/; max-age=${
-          60 * 60 * 24 * 7
-        }; SameSite=Lax`
+    if (!username || !password) {
+      setError('Username and password are required')
+      return
+    }
 
-        // Invalidate queries to refetch fresh data
-        queryClient.invalidateQueries()
-
-        // Navigate to the callback URL or default page
-        router.push(result.redirectUrl || `/${DEFAULT_PAGE}`)
-        router.refresh()
-      } else {
-        setError(result.error || translations.loginError)
-      }
-    })
+    await login(username, password, callbackUrl)
   }
 
   return (
@@ -66,9 +56,7 @@ export default function LoginForm({ translations }: LoginFormProps) {
 
       {/* Content Section */}
       {isDevelopment ? (
-        <form action={handleSubmit} className='w-full space-y-6'>
-          <input type='hidden' name='callbackUrl' value={callbackUrl} />
-
+        <form onSubmit={handleSubmit} className='w-full space-y-6'>
           <div className='space-y-4'>
             <div>
               <label
@@ -103,67 +91,23 @@ export default function LoginForm({ translations }: LoginFormProps) {
             </div>
           </div>
 
-          {error && (
-            <p className='text-red-500 text-sm text-center mt-2'>{error}</p>
+          {(error || authError) && (
+            <p className='text-red-500 text-sm text-center mt-2'>
+              {error || authError}
+            </p>
           )}
 
           <Button
             type='submit'
-            disabled={isPending}
+            disabled={isLoading}
             className='w-full py-6'
             variant='default'>
-            {isPending ? translations.loggingIn : translations.login}
+            {isLoading ? translations.loggingIn : translations.login}
           </Button>
         </form>
       ) : (
         <CassoLoginButton loginText={translations.login} />
       )}
     </>
-  )
-}
-
-// Component Logo
-export function CassoLogo() {
-  const handleLogoClick = () => {
-    if (process.env.NEXT_PUBLIC_CASSO_URL) {
-      window.open(
-        process.env.NEXT_PUBLIC_CASSO_URL,
-        '_blank',
-        'noopener,noreferrer'
-      )
-    }
-  }
-
-  return (
-    <div className='mb-8'>
-      <Image
-        src='/images/casso-logo.svg'
-        width={150}
-        height={150}
-        alt='Casso Logo'
-        onClick={handleLogoClick}
-        className={`  
-          ${
-            process.env.NEXT_PUBLIC_CASSO_URL
-              ? 'cursor-pointer'
-              : 'cursor-default'
-          }  
-          hover:scale-110 transition-transform duration-300  
-        `}
-      />
-    </div>
-  )
-}
-
-// Component Button for Casso
-export function CassoLoginButton({ loginText }: { loginText: string }) {
-  const router = useRouter()
-
-  return (
-    <Button
-      className='w-full px-4 py-6 bg-primary text-primary-foreground'
-      onClick={() => router.push(process.env.NEXT_PUBLIC_CASSO_URL || '')}>
-      <span className='text-xl font-bold'>{loginText}</span>
-    </Button>
   )
 }

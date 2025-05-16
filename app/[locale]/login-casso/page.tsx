@@ -1,5 +1,4 @@
 // app/[locale]/login-casso/page.tsx
-import { loginWithCasso } from '@/actions/auth'
 import CassoLoginRedirect from '@/components/auth/CassoLoginRedirect'
 import { getTranslations } from 'next-intl/server'
 import { Metadata } from 'next'
@@ -33,7 +32,6 @@ export default async function LoginCassoPage({
       <CassoLoginRedirect
         employeeId={employeeId}
         cassoToken={cassoToken}
-        loginAction={loginWithCasso}
         translations={translations}
       />
     </div>

@@ -1,30 +1,48 @@
 // lib/auth.ts
-import { getServerSession } from 'next-auth'
-import { authConfig } from './auth.config'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-/**
- * Get the session in server components
- */
-export async function getSession() {
-  return getServerSession(authConfig)
+// User type definition
+export interface User {
+  id: string
+  name: string
+  username: string
+  role: string
+  access?: string
 }
 
 /**
  * Get the current user from the session
  * Use this in server components to access the current user
  */
-export async function getCurrentUser() {
-  const session = await getSession()
-  return session?.user
+export async function getCurrentUser(): Promise<User | null> {
+  try {
+    const cookieStore = await cookies()
+    const isLoggedIn = cookieStore.get('logged-in')?.value === 'true'
+
+    if (!isLoggedIn) {
+      return null
+    }
+
+    const userSession = cookieStore.get('user-session')?.value
+
+    if (!userSession) {
+      return null
+    }
+
+    return JSON.parse(userSession) as User
+  } catch (error) {
+    console.error('Error getting current user:', error)
+    return null
+  }
 }
 
 /**
  * Check if user is authenticated
  */
-export async function isAuthenticated() {
-  const session = await getSession()
-  return !!session?.user
+export async function isAuthenticated(): Promise<boolean> {
+  const cookieStore = await cookies()
+  return cookieStore.get('logged-in')?.value === 'true'
 }
 
 /**
@@ -40,9 +58,3 @@ export async function requireAuth() {
 
   return user
 }
-
-// Export auth config for use in API routes
-export { authConfig }
-
-// Export helper functions for client components
-export { signIn, signOut } from 'next-auth/react'

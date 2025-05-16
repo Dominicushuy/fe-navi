@@ -3,10 +3,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { DEFAULT_PAGE } from '@/constants/router'
-import { CassoLogo } from './LoginForm'
 import { Button } from '@/components/ui/button'
-import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/contexts/auth-context'
+import { CassoLogo } from './CassoComponents' // Import the CassoLogo component
 
 interface CassoTranslations {
   loading: string
@@ -18,23 +17,14 @@ interface CassoTranslations {
 export default function CassoLoginRedirect({
   employeeId,
   cassoToken,
-  loginAction,
   translations,
 }: {
   employeeId: string
   cassoToken: string
-  loginAction: (
-    employeeId: string,
-    cassoToken: string
-  ) => Promise<{
-    success: boolean
-    error?: string
-    redirectUrl?: string
-  }>
   translations: CassoTranslations
 }) {
   const router = useRouter()
-  const queryClient = useQueryClient()
+  const { loginCasso, error: authError, isLoading: authLoading } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -47,20 +37,10 @@ export default function CassoLoginRedirect({
       }
 
       try {
-        const result = await loginAction(employeeId, cassoToken)
+        const success = await loginCasso(employeeId, cassoToken)
 
-        if (result.success) {
-          // Set the auth cookie client-side as well
-          document.cookie = `logged-in=true; path=/; max-age=${
-            60 * 60 * 24 * 7
-          }; SameSite=Lax`
-
-          // Invalidate queries to refetch fresh data after login
-          queryClient.invalidateQueries()
-          router.push(result.redirectUrl || `/${DEFAULT_PAGE}`)
-          router.refresh()
-        } else {
-          setError(result.error || translations.loginError)
+        if (!success) {
+          setError(authError || translations.loginError)
           setIsLoading(false)
         }
       } catch (error) {
@@ -71,7 +51,7 @@ export default function CassoLoginRedirect({
     }
 
     handleCassoLogin()
-  }, [employeeId, cassoToken, router, loginAction, queryClient, translations])
+  }, [employeeId, cassoToken, loginCasso, authError, translations])
 
   return (
     <div className='flex flex-col items-center w-full'>
