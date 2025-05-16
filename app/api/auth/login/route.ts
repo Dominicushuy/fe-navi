@@ -18,46 +18,33 @@ export async function POST(request: NextRequest) {
     let isValidCredentials = false
     let userData = null
 
-    if (process.env.NODE_ENV === 'development') {
-      // Simple dev authentication logic
-      if (username === 'admin' && password === 'password') {
-        isValidCredentials = true
-        userData = {
-          id: '1',
-          name: 'Admin User',
-          username: 'admin',
-          role: 'admin',
+    // Production authentication logic
+    // Replace with your actual authentication logic against your backend
+    try {
+      const apiResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/navi/login/`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
         }
-      }
-    } else {
-      // Production authentication logic
-      // Replace with your actual authentication logic against your backend
-      try {
-        const apiResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/navi/login/`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
-          }
-        )
+      )
 
-        if (apiResponse.ok) {
-          const data = await apiResponse.json()
-          if (data.access) {
-            isValidCredentials = true
-            userData = {
-              id: data.id || '1',
-              name: data.username || 'User',
-              username: data.username,
-              role: data.role || 'user',
-              access: data.access,
-            }
+      if (apiResponse.ok) {
+        const data = await apiResponse.json()
+        if (data.access) {
+          isValidCredentials = true
+          userData = {
+            id: data.id || '1',
+            name: data.username || 'User',
+            username: data.username,
+            role: data.role || 'user',
+            access: data.access,
           }
         }
-      } catch (error) {
-        console.error('API login error:', error)
       }
+    } catch (error) {
+      console.error('API login error:', error)
     }
 
     if (!isValidCredentials || !userData) {
