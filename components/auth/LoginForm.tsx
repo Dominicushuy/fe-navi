@@ -4,10 +4,10 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { FormEvent, useState } from 'react'
+import { FormEvent, useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import { DEFAULT_PAGE } from '@/constants/router'
-import { CassoLogo, CassoLoginButton } from './CassoComponents' // Import the components
+import { CassoLogo, CassoLoginButton } from './CassoComponents'
 
 // Define the translations interface
 interface Translations {
@@ -29,7 +29,18 @@ export default function LoginForm({ translations }: LoginFormProps) {
   const searchParams = useSearchParams()
   const { login, isLoading, error: authError } = useAuth()
   const [error, setError] = useState<string | null>(null)
-  const isDevelopment = process.env.NODE_ENV === 'development'
+  const [isDevelopment, setIsDevelopment] = useState(false)
+
+  // Check if we're in development environment
+  useEffect(() => {
+    // You can't directly access process.env.NODE_ENV in client components
+    // We'll use a simple check - in production, window.location should use https
+    // Alternatively, you could expose this via a runtime config
+    setIsDevelopment(
+      window.location.hostname === 'localhost' ||
+        window.location.protocol === 'http:'
+    )
+  }, [])
 
   const callbackUrl = searchParams.get('callbackUrl') || `/${DEFAULT_PAGE}`
 
@@ -106,6 +117,7 @@ export default function LoginForm({ translations }: LoginFormProps) {
           </Button>
         </form>
       ) : (
+        // In production, only show Casso login option
         <CassoLoginButton loginText={translations.login} />
       )}
     </>

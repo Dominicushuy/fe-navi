@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
 
       if (apiResponse.ok) {
         const data = await apiResponse.json()
+
+        console.log('API response:', data)
+
         if (data.access) {
           isValidCredentials = true
           userData = {

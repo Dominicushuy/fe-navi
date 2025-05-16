@@ -27,15 +27,6 @@
     "authInfoMissing": "認証情報が見つかりません",
     "backToLogin": "ログインページに戻る"
   },
-  "HomePage": {
-    "title": "こんにちは世界！",
-    "about": "アバウトページへ",
-    "deployNow": "今すぐデプロイ",
-    "readDocs": "ドキュメントを読む",
-    "learn": "学ぶ",
-    "examples": "例",
-    "goToNextJs": "nextjs.orgへ"
-  },
   "LanguageSwitcher": {
     "changeLanguage": "言語を変更"
   }

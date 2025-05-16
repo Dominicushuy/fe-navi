@@ -24,7 +24,7 @@ export default async function LoginPage() {
   }
 
   return (
-    <div className='p-8 flex flex-col items-center'>
+    <div className='min-h-full flex flex-col justify-center'>
       <LoginForm translations={translations} />
     </div>
   )

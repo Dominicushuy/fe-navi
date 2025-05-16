@@ -1,15 +1,9 @@
 // contexts/auth-context.tsx
 'use client'
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from 'react'
-import { useRouter } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
+import React, { createContext, useContext, ReactNode } from 'react'
+import { useAuth as useAuthHook } from '@/hooks/use-auth'
+import { useQuery } from '@tanstack/react-query'
 
 // User type
 interface User {
@@ -39,158 +33,32 @@ const AuthContext = createContext<AuthContextState | undefined>(undefined)
 
 // Provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
-  const queryClient = useQueryClient()
+  const auth = useAuthHook()
 
-  // Fetch the current user data on mount
-  useEffect(() => {
-    async function fetchUser() {
+  // Use React Query to fetch user data
+  const { data, isLoading: isUserLoading } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
       try {
         const response = await fetch('/api/auth/user')
-
-        if (response.ok) {
-          const data = await response.json()
-          if (data.success && data.user) {
-            setUser(data.user)
-          } else {
-            setUser(null)
-          }
-        } else {
-          setUser(null)
-        }
-      } catch (e) {
-        console.error('Error fetching user:', e)
-        setUser(null)
-      } finally {
-        setIsLoading(false)
+        if (!response.ok) return { user: null }
+        return await response.json()
+      } catch (error) {
+        console.error('Error fetching user:', error)
+        return { user: null }
       }
-    }
-
-    fetchUser()
-  }, [])
-
-  // Login function
-  async function login(
-    username: string,
-    password: string,
-    callbackUrl?: string
-  ): Promise<boolean> {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        // Set the user data
-        setUser(data.user)
-
-        // Invalidate queries to refresh data
-        queryClient.invalidateQueries()
-
-        // Navigate to the callback URL or default
-        router.push(callbackUrl || '/')
-        router.refresh()
-
-        return true
-      } else {
-        setError(data.error || 'Login failed')
-        return false
-      }
-    } catch (e) {
-      console.error('Login error:', e)
-      setError('An error occurred. Please try again.')
-      return false
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Casso login function
-  async function loginCasso(
-    employeeId: string,
-    cassoToken: string
-  ): Promise<boolean> {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const response = await fetch('/api/auth/casso', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          'employee-id': employeeId,
-          'casso-token': cassoToken,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        // Set the user data
-        setUser(data.user)
-
-        // Invalidate queries to refresh data
-        queryClient.invalidateQueries()
-
-        // Navigate to home
-        router.push('/')
-        router.refresh()
-
-        return true
-      } else {
-        setError(data.error || 'Casso authentication failed')
-        return false
-      }
-    } catch (e) {
-      console.error('Casso login error:', e)
-      setError('An error occurred. Please try again.')
-      return false
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Logout function
-  async function handleLogout(): Promise<void> {
-    setIsLoading(true)
-
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-
-      // Clear user data
-      setUser(null)
-
-      // Clear all cached queries
-      queryClient.clear()
-
-      // Navigate to login
-      router.push('/login')
-      router.refresh()
-    } catch (e) {
-      console.error('Logout error:', e)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  })
 
   // Context value
   const value: AuthContextState = {
-    user,
-    isLoading,
-    error,
-    login,
-    loginCasso,
-    logout: handleLogout,
+    user: data?.user || null,
+    isLoading: isUserLoading || auth.isLoading,
+    error: auth.error,
+    login: auth.login,
+    loginCasso: auth.loginCasso,
+    logout: auth.logout,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

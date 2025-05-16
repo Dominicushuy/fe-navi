@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/auth-context'
-import { CassoLogo } from './CassoComponents' // Import the CassoLogo component
+import { CassoLogo } from './CassoComponents'
 
 interface CassoTranslations {
   loading: string

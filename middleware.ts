@@ -63,7 +63,6 @@ export async function middleware(request: NextRequest) {
     // Add the full path as callback URL
     loginUrl.searchParams.set('callbackUrl', pathname)
 
-    console.log(`[Middleware] Redirecting to: ${loginUrl.toString()}`)
     return NextResponse.redirect(loginUrl)
   }
 

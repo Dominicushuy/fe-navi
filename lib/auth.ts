@@ -17,7 +17,7 @@ export interface User {
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    const cookieStore = await cookies()
+    const cookieStore = await cookies() // Updated for async cookies
     const isLoggedIn = cookieStore.get('logged-in')?.value === 'true'
 
     if (!isLoggedIn) {
@@ -41,7 +41,7 @@ export async function getCurrentUser(): Promise<User | null> {
  * Check if user is authenticated
  */
 export async function isAuthenticated(): Promise<boolean> {
-  const cookieStore = await cookies()
+  const cookieStore = await cookies() // Updated for async cookies
   return cookieStore.get('logged-in')?.value === 'true'
 }
 

@@ -13,6 +13,8 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null)
 
   // Login with username/password
+  // - Works directly in development
+  // - In production, may redirect to Casso
   async function login(
     username: string,
     password: string,
@@ -43,10 +45,17 @@ export function useAuth() {
         router.refresh()
         return true
       } else {
+        // If we have a redirectUrl, it means we need to redirect to Casso in production
+        if (result.redirectUrl) {
+          window.location.href = result.redirectUrl
+          return false
+        }
+
         setError(result.error || 'Login failed')
         return false
       }
     } catch (e) {
+      console.error('Login error:', e)
       setError('An error occurred. Please try again.')
       return false
     } finally {
@@ -78,6 +87,7 @@ export function useAuth() {
         return false
       }
     } catch (e) {
+      console.error('Casso login error:', e)
       setError('An error occurred. Please try again.')
       return false
     } finally {

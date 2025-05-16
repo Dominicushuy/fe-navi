@@ -12,8 +12,8 @@ export default function LoginLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100 p-4'>
-      <div className='w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden'>
+    <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-950 dark:to-primary-900 p-4'>
+      <div className='w-full max-w-md bg-background rounded-2xl shadow-xl overflow-hidden'>
         {children}
       </div>
     </div>

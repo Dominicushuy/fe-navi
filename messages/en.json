@@ -27,15 +27,6 @@
     "authInfoMissing": "Authentication information is missing",
     "backToLogin": "Back to login"
   },
-  "HomePage": {
-    "title": "Hello world!",
-    "about": "Go to the about page",
-    "deployNow": "Deploy now",
-    "readDocs": "Read our docs",
-    "learn": "Learn",
-    "examples": "Examples",
-    "goToNextJs": "Go to nextjs.org"
-  },
   "LanguageSwitcher": {
     "changeLanguage": "Change language"
   }

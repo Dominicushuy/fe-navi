@@ -20,7 +20,7 @@ export function CassoLogo() {
   }
 
   return (
-    <div className='mb-8'>
+    <div className='flex justify-center'>
       <Image
         src='/images/casso-logo.svg'
         width={150}
@@ -48,9 +48,9 @@ export function CassoLoginButton({ loginText }: { loginText: string }) {
 
   return (
     <Button
-      className='w-full px-4 py-6 bg-primary text-primary-foreground'
+      className='w-full px-4 py-6 bg-primary text-primary-foreground font-semibold'
       onClick={() => router.push(process.env.NEXT_PUBLIC_CASSO_URL || '')}>
-      <span className='text-xl font-bold'>{loginText}</span>
+      <span className='text-lg'>{loginText}</span>
     </Button>
   )
 }

@@ -1,20 +1,31 @@
 // app/api/auth/user/route.ts
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user data from cookie
-    const userSessionCookie = request.cookies.get('user-session')
+    // Get user data from cookie - using async cookies() in Next.js 15
+    const cookieStore = await cookies()
+    const isLoggedIn = cookieStore.get('logged-in')?.value === 'true'
 
-    if (!userSessionCookie || !userSessionCookie.value) {
+    if (!isLoggedIn) {
       return NextResponse.json(
         { success: false, error: 'Not authenticated' },
         { status: 401 }
       )
     }
 
+    const userSession = cookieStore.get('user-session')?.value
+
+    if (!userSession) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid session' },
+        { status: 401 }
+      )
+    }
+
     try {
-      const userData = JSON.parse(userSessionCookie.value)
+      const userData = JSON.parse(userSession)
       return NextResponse.json({
         success: true,
         user: userData,
