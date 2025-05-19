@@ -3,6 +3,7 @@
 
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { DEFAULT_PAGE } from '@/constants/router'
 
 /**
  * Result type for auth operations
@@ -16,15 +17,14 @@ export interface AuthResult {
 
 /**
  * Login with username and password
- * In development: Direct login without API call
- * In production: Redirects to Casso login (should not be used directly)
  */
 export async function loginWithCredentials(
   formData: FormData
 ): Promise<AuthResult> {
   const username = formData.get('username') as string
   const password = formData.get('password') as string
-  const callbackUrl = (formData.get('callbackUrl') as string) || '/'
+  const callbackUrl =
+    (formData.get('callbackUrl') as string) || `/${DEFAULT_PAGE}`
 
   if (!username || !password) {
     return {
@@ -34,21 +34,57 @@ export async function loginWithCredentials(
   }
 
   try {
-    const nodeEnv = process.env.NODE_ENV || 'development'
-    const isDevelopment = nodeEnv === 'development'
+    const isDevelopment = process.env.NODE_ENV === 'development'
+    const apiUrl = isDevelopment
+      ? `${process.env.NEXT_PUBLIC_API_URL}/navi/login/`
+      : `${process.env.NEXT_PRIVATE_API_URL}/navi/login/`
 
-    // DEVELOPMENT MODE - Allow direct username/password login
-    if (isDevelopment) {
-      // Simple dev authentication - any username/password is valid
-      const userData = {
-        id: '1',
-        name: username,
-        username: username,
-        role: 'admin', // Default admin role in development
-        access: 'mock-token',
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+        cache: 'no-store',
+      })
+
+      if (!response.ok) {
+        // If the direct API call didn't work, redirect to Casso SSO in production
+        if (!isDevelopment) {
+          const cassoUrl = process.env.NEXT_PUBLIC_CASSO_URL
+          if (cassoUrl) {
+            return {
+              success: false,
+              redirectUrl: cassoUrl,
+              error: 'Please use Casso SSO to login',
+            }
+          }
+        }
+
+        return {
+          success: false,
+          error: 'Invalid credentials',
+        }
       }
 
-      // Set cookies
+      const data = await response.json()
+
+      if (!data.access) {
+        return {
+          success: false,
+          error: 'Invalid response from authentication server',
+        }
+      }
+
+      // Authentication successful, create user data
+      const userData = {
+        id: data.id || '1',
+        name: data.username || username,
+        username: data.username || username,
+        role: data.role || 'user',
+        access: data.access,
+      }
+
+      // Set cookies - using async cookies() in Next.js 15
       const cookieStore = await cookies()
 
       cookieStore.set({
@@ -56,7 +92,7 @@ export async function loginWithCredentials(
         value: 'true',
         httpOnly: true,
         path: '/',
-        secure: false, // Not secure in development
+        secure: !isDevelopment,
         maxAge: 60 * 60 * 24 * 7, // 1 week
         sameSite: 'lax',
       })
@@ -66,7 +102,7 @@ export async function loginWithCredentials(
         value: JSON.stringify(userData),
         httpOnly: true,
         path: '/',
-        secure: false, // Not secure in development
+        secure: !isDevelopment,
         maxAge: 60 * 60 * 24 * 7, // 1 week
         sameSite: 'lax',
       })
@@ -76,22 +112,24 @@ export async function loginWithCredentials(
         redirectUrl: callbackUrl,
         user: userData,
       }
-    }
-    // PRODUCTION MODE - Redirect to Casso login
-    else {
-      const cassoUrl = process.env.NEXT_PUBLIC_CASSO_URL
-      if (!cassoUrl) {
-        return {
-          success: false,
-          error: 'Casso URL not configured. Please log in through Casso SSO.',
+    } catch (error) {
+      console.error('Login API error:', error)
+
+      // Fallback to Casso SSO in production
+      if (!isDevelopment) {
+        const cassoUrl = process.env.NEXT_PUBLIC_CASSO_URL
+        if (cassoUrl) {
+          return {
+            success: false,
+            redirectUrl: cassoUrl,
+            error: 'Direct login failed. Redirecting to Casso SSO.',
+          }
         }
       }
 
-      // For client-side redirection (we'll return this url)
       return {
         success: false,
-        error: 'Direct login not allowed in production. Please use Casso SSO.',
-        redirectUrl: cassoUrl,
+        error: 'An error occurred during authentication',
       }
     }
   } catch (error) {
@@ -105,8 +143,7 @@ export async function loginWithCredentials(
 
 /**
  * Login with Casso
- * In development: Simulated login
- * In production: Actual Casso API authentication
+ * This should only be used in production, but we'll handle both environments
  */
 export async function loginWithCasso(
   employeeId: string,
@@ -120,72 +157,20 @@ export async function loginWithCasso(
   }
 
   try {
-    const nodeEnv = process.env.NODE_ENV || 'development'
-    const isDevelopment = nodeEnv === 'development'
+    const isDevelopment = process.env.NODE_ENV === 'development'
 
-    // DEVELOPMENT MODE - Simulate Casso login
-    if (isDevelopment) {
-      const userData = {
-        id: employeeId,
-        name: 'Casso User',
-        username: employeeId,
-        role: 'admin', // Default admin role in development
-      }
+    // Get the Casso API URL
+    const apiUrl = process.env.NEXT_PRIVATE_API_LOGIN_URL
 
-      // Set cookies
-      const cookieStore = await cookies()
-
-      cookieStore.set({
-        name: 'logged-in',
-        value: 'true',
-        httpOnly: true,
-        path: '/',
-        secure: false, // Not secure in development
-        maxAge: 60 * 60 * 24 * 7, // 1 week
-        sameSite: 'lax',
-      })
-
-      cookieStore.set({
-        name: 'user-session',
-        value: JSON.stringify(userData),
-        httpOnly: true,
-        path: '/',
-        secure: false, // Not secure in development
-        maxAge: 60 * 60 * 24 * 7, // 1 week
-        sameSite: 'lax',
-      })
-
+    if (!apiUrl) {
       return {
-        success: true,
-        redirectUrl: '/',
-        user: userData,
+        success: false,
+        error: 'Casso API URL is not configured',
       }
     }
-    // PRODUCTION MODE - Real Casso authentication
-    else {
-      // Get the Casso API URL
-      const apiUrl = process.env.NEXT_PRIVATE_API_LOGIN_URL
 
-      if (!apiUrl) {
-        return {
-          success: false,
-          error: 'Casso API URL is not configured',
-        }
-      }
-
-      // Ensure proper URL construction
-      let fullApiUrl: string
-      try {
-        fullApiUrl = apiUrl
-      } catch (e) {
-        console.error('Invalid Casso API URL:', apiUrl, e)
-        return {
-          success: false,
-          error: 'Server configuration error - invalid API URL',
-        }
-      }
-
-      const response = await fetch(fullApiUrl, {
+    try {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -223,7 +208,7 @@ export async function loginWithCasso(
         access: data.access,
       }
 
-      // Set cookies
+      // Set cookies - using async cookies() in Next.js 15
       const cookieStore = await cookies()
 
       cookieStore.set({
@@ -231,7 +216,7 @@ export async function loginWithCasso(
         value: 'true',
         httpOnly: true,
         path: '/',
-        secure: true, // Secure in production
+        secure: !isDevelopment,
         maxAge: 60 * 60 * 24 * 7, // 1 week
         sameSite: 'lax',
       })
@@ -241,15 +226,21 @@ export async function loginWithCasso(
         value: JSON.stringify(userData),
         httpOnly: true,
         path: '/',
-        secure: true, // Secure in production
+        secure: !isDevelopment,
         maxAge: 60 * 60 * 24 * 7, // 1 week
         sameSite: 'lax',
       })
 
       return {
         success: true,
-        redirectUrl: '/',
+        redirectUrl: `/${DEFAULT_PAGE}`,
         user: userData,
+      }
+    } catch (error) {
+      console.error('Casso API error:', error)
+      return {
+        success: false,
+        error: 'An error occurred during Casso authentication',
       }
     }
   } catch (error) {
@@ -258,31 +249,6 @@ export async function loginWithCasso(
       success: false,
       error: 'An error occurred during Casso authentication',
     }
-  }
-}
-
-/**
- * Get current user from server-side
- */
-export async function getCurrentUser() {
-  try {
-    const cookieStore = await cookies() // Updated for async cookies
-    const isLoggedIn = cookieStore.get('logged-in')?.value === 'true'
-
-    if (!isLoggedIn) {
-      return { user: null }
-    }
-
-    const userSession = cookieStore.get('user-session')?.value
-
-    if (!userSession) {
-      return { user: null }
-    }
-
-    return { user: JSON.parse(userSession) }
-  } catch (error) {
-    console.error('Error getting current user:', error)
-    return { user: null }
   }
 }
 

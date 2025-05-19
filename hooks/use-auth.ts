@@ -1,7 +1,6 @@
 // hooks/use-auth.ts
 'use client'
 
-import { loginWithCredentials, loginWithCasso, logout } from '@/actions/auth'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
@@ -13,8 +12,6 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null)
 
   // Login with username/password
-  // - Works directly in development
-  // - In production, may redirect to Casso
   async function login(
     username: string,
     password: string,
@@ -31,7 +28,16 @@ export function useAuth() {
     }
 
     try {
-      const result = await loginWithCredentials(formData)
+      // Make a server action call
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password, callbackUrl }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const result = await response.json()
 
       if (result.success) {
         // Set client-side cookie for immediate effect
@@ -40,7 +46,10 @@ export function useAuth() {
         }; SameSite=Lax`
 
         // Invalidate queries to refresh data
-        queryClient.invalidateQueries()
+        queryClient.invalidateQueries({
+          queryKey: ['user'],
+        })
+
         router.push(result.redirectUrl || '/')
         router.refresh()
         return true
@@ -69,7 +78,18 @@ export function useAuth() {
     setError(null)
 
     try {
-      const result = await loginWithCasso(employeeId, cassoToken)
+      const response = await fetch('/api/auth/casso', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          'employee-id': employeeId,
+          'casso-token': cassoToken,
+        }),
+      })
+
+      const result = await response.json()
 
       if (result.success) {
         // Set client-side cookie for immediate effect
@@ -78,7 +98,10 @@ export function useAuth() {
         }; SameSite=Lax`
 
         // Invalidate queries to refresh data
-        queryClient.invalidateQueries()
+        queryClient.invalidateQueries({
+          queryKey: ['user'],
+        })
+
         router.push(result.redirectUrl || '/')
         router.refresh()
         return true
@@ -100,18 +123,26 @@ export function useAuth() {
     setIsLoading(true)
 
     try {
-      // Clear client-side cookie for immediate effect
+      // Clear client-side cookies for immediate effect
       document.cookie =
         'logged-in=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax'
+      document.cookie =
+        'user-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax'
 
       // Clear all cached queries
       queryClient.clear()
 
-      // Call server action to logout
-      await logout()
+      // Call logout API endpoint
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+      })
+
+      // Redirect to login page
+      router.push('/login')
+      router.refresh()
     } catch (e) {
       console.error('Logout error:', e)
-      // Fallback client-side redirect if server action fails
+      // Fallback client-side redirect if API call fails
       router.push('/login')
       router.refresh()
     } finally {

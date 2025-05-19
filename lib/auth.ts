@@ -52,15 +52,34 @@ export const auth = {
   /**
    * Protect a route by requiring authentication
    * Use this in server components to protect routes
+   * Returns the user if authenticated, redirects to login if not
    */
-  async requireAuth() {
+  async requireAuth(redirectPath?: string) {
     const user = await this.getCurrentUser()
 
     if (!user) {
-      redirect('/login')
+      const path = redirectPath
+        ? `/login?callbackUrl=${encodeURIComponent(redirectPath)}`
+        : '/login'
+      redirect(path)
     }
 
     return user
+  },
+
+  /**
+   * Get the authorization header with the access token
+   */
+  async getAuthHeader(): Promise<HeadersInit> {
+    const user = await this.getCurrentUser()
+
+    if (!user?.access) {
+      return {}
+    }
+
+    return {
+      Authorization: `Bearer ${user.access}`,
+    }
   },
 }
 
@@ -68,3 +87,4 @@ export const auth = {
 export const getCurrentUser = auth.getCurrentUser
 export const isAuthenticated = auth.isAuthenticated
 export const requireAuth = auth.requireAuth
+export const getAuthHeader = auth.getAuthHeader

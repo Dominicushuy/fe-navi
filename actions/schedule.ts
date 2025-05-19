@@ -2,7 +2,9 @@
 'use server'
 
 import { auth } from '@/lib/auth'
+import { revalidateTag } from 'next/cache'
 
+// Type definitions
 export interface ScheduledJob {
   id: string
   username: string
@@ -60,7 +62,6 @@ export interface ScheduledJobResponse {
   results: ScheduledJob[]
 }
 
-// Interface for the job update payload
 export interface ScheduledJobUpdate {
   id: string
   [key: string]: any // Allow any field to be updated
@@ -76,7 +77,7 @@ export async function getScheduledJobs(
   search: string = ''
 ): Promise<ScheduledJobResponse> {
   const user = await auth.getCurrentUser()
-  if (!user) {
+  if (!user || !user.access) {
     throw new Error('Not authenticated')
   }
 
@@ -91,8 +92,6 @@ export async function getScheduledJobs(
     limit: limit.toString(),
   })
 
-  console.log(user)
-
   try {
     const response = await fetch(`${apiUrl}?${queryParams.toString()}`, {
       headers: {
@@ -101,12 +100,16 @@ export async function getScheduledJobs(
         Authorization: `Bearer ${user.access}`,
       },
       next: {
+        tags: [`scheduledJobs-${jobType}`],
         revalidate: 60, // Revalidate every 60 seconds
       },
     })
 
     if (!response.ok) {
-      throw new Error(`Error fetching scheduled jobs: ${response.statusText}`)
+      const errorText = await response.text().catch(() => 'Unknown error')
+      throw new Error(
+        `Error fetching scheduled jobs: ${response.status} ${errorText}`
+      )
     }
 
     return await response.json()
@@ -123,7 +126,7 @@ export async function updateScheduledJob(
   update: ScheduledJobUpdate
 ): Promise<ScheduledJob> {
   const user = await auth.getCurrentUser()
-  if (!user) {
+  if (!user || !user.access) {
     throw new Error('Not authenticated')
   }
 
@@ -142,8 +145,15 @@ export async function updateScheduledJob(
     })
 
     if (!response.ok) {
-      throw new Error(`Error updating scheduled job: ${response.statusText}`)
+      const errorText = await response.text().catch(() => 'Unknown error')
+      throw new Error(
+        `Error updating scheduled job: ${response.status} ${errorText}`
+      )
     }
+
+    // Revalidate the tags after successful update
+    revalidateTag(`scheduledJobs-NAVI`)
+    revalidateTag(`scheduledJobs-CVER`)
 
     return await response.json()
   } catch (error) {
@@ -157,7 +167,7 @@ export async function updateScheduledJob(
  */
 export async function deleteScheduledJob(id: string): Promise<void> {
   const user = await auth.getCurrentUser()
-  if (!user) {
+  if (!user || !user.access) {
     throw new Error('Not authenticated')
   }
 
@@ -175,10 +185,60 @@ export async function deleteScheduledJob(id: string): Promise<void> {
     })
 
     if (!response.ok) {
-      throw new Error(`Error deleting scheduled job: ${response.statusText}`)
+      const errorText = await response.text().catch(() => 'Unknown error')
+      throw new Error(
+        `Error deleting scheduled job: ${response.status} ${errorText}`
+      )
     }
+
+    // Revalidate the tags after successful deletion
+    revalidateTag(`scheduledJobs-NAVI`)
+    revalidateTag(`scheduledJobs-CVER`)
   } catch (error) {
     console.error('Failed to delete scheduled job:', error)
+    throw error
+  }
+}
+
+/**
+ * Create a new scheduled job
+ */
+export async function createScheduledJob(
+  jobData: Omit<ScheduledJob, 'id'>
+): Promise<ScheduledJob> {
+  const user = await auth.getCurrentUser()
+  if (!user || !user.access) {
+    throw new Error('Not authenticated')
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL
+  const apiUrl = `${baseUrl}/job/scheduled-job/`
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${user.access}`,
+      },
+      body: JSON.stringify(jobData),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error')
+      throw new Error(
+        `Error creating scheduled job: ${response.status} ${errorText}`
+      )
+    }
+
+    // Revalidate the tags after successful creation
+    revalidateTag(`scheduledJobs-NAVI`)
+    revalidateTag(`scheduledJobs-CVER`)
+
+    return await response.json()
+  } catch (error) {
+    console.error('Failed to create scheduled job:', error)
     throw error
   }
 }

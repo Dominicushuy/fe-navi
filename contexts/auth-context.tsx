@@ -4,7 +4,6 @@
 import React, { createContext, useContext, ReactNode } from 'react'
 import { useAuth as useAuthHook } from '@/hooks/use-auth'
 import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
 
 // User type
 interface User {
@@ -35,7 +34,6 @@ const AuthContext = createContext<AuthContextState | undefined>(undefined)
 // Provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
   const auth = useAuthHook()
-  const router = useRouter()
 
   // Use React Query to fetch user data
   const {
@@ -50,9 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!response.ok) {
           // If we get a 401, the token is likely expired
           if (response.status === 401) {
-            // Clear user session and redirect to login
-            auth.logout()
-            router.push('/login')
+            // Client-side logout
+            document.cookie =
+              'logged-in=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax'
+            document.cookie =
+              'user-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax'
+            window.location.href = '/login'
             return { user: null }
           }
           return { user: null }
@@ -64,6 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    retry: 1, // Only retry once
   })
 
   // Context value
