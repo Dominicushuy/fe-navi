@@ -12,49 +12,59 @@ export interface User {
 }
 
 /**
- * Get the current user from the session
- * Use this in server components to access the current user
+ * Namespace for authentication utilities
  */
-export async function getCurrentUser(): Promise<User | null> {
-  try {
-    const cookieStore = await cookies() // Updated for async cookies
-    const isLoggedIn = cookieStore.get('logged-in')?.value === 'true'
+export const auth = {
+  /**
+   * Get the current user from the session
+   * Use this in server components to access the current user
+   */
+  async getCurrentUser(): Promise<User | null> {
+    try {
+      const cookieStore = await cookies()
+      const isLoggedIn = cookieStore.get('logged-in')?.value === 'true'
 
-    if (!isLoggedIn) {
+      if (!isLoggedIn) {
+        return null
+      }
+
+      const userSession = cookieStore.get('user-session')?.value
+
+      if (!userSession) {
+        return null
+      }
+
+      return JSON.parse(userSession) as User
+    } catch (error) {
+      console.error('Error getting current user:', error)
       return null
     }
+  },
 
-    const userSession = cookieStore.get('user-session')?.value
+  /**
+   * Check if user is authenticated
+   */
+  async isAuthenticated(): Promise<boolean> {
+    const cookieStore = await cookies()
+    return cookieStore.get('logged-in')?.value === 'true'
+  },
 
-    if (!userSession) {
-      return null
+  /**
+   * Protect a route by requiring authentication
+   * Use this in server components to protect routes
+   */
+  async requireAuth() {
+    const user = await this.getCurrentUser()
+
+    if (!user) {
+      redirect('/login')
     }
 
-    return JSON.parse(userSession) as User
-  } catch (error) {
-    console.error('Error getting current user:', error)
-    return null
-  }
+    return user
+  },
 }
 
-/**
- * Check if user is authenticated
- */
-export async function isAuthenticated(): Promise<boolean> {
-  const cookieStore = await cookies() // Updated for async cookies
-  return cookieStore.get('logged-in')?.value === 'true'
-}
-
-/**
- * Protect a route by requiring authentication
- * Use this in server components to protect routes
- */
-export async function requireAuth() {
-  const user = await getCurrentUser()
-
-  if (!user) {
-    redirect('/login')
-  }
-
-  return user
-}
+// Export backwards-compatible individual functions for existing code
+export const getCurrentUser = auth.getCurrentUser
+export const isAuthenticated = auth.isAuthenticated
+export const requireAuth = auth.requireAuth

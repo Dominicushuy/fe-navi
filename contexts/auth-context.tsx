@@ -4,6 +4,7 @@
 import React, { createContext, useContext, ReactNode } from 'react'
 import { useAuth as useAuthHook } from '@/hooks/use-auth'
 import { useQuery } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 
 // User type
 interface User {
@@ -34,14 +35,28 @@ const AuthContext = createContext<AuthContextState | undefined>(undefined)
 // Provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
   const auth = useAuthHook()
+  const router = useRouter()
 
   // Use React Query to fetch user data
-  const { data, isLoading: isUserLoading } = useQuery({
+  const {
+    data,
+    isLoading: isUserLoading,
+    error: userError,
+  } = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
       try {
         const response = await fetch('/api/auth/user')
-        if (!response.ok) return { user: null }
+        if (!response.ok) {
+          // If we get a 401, the token is likely expired
+          if (response.status === 401) {
+            // Clear user session and redirect to login
+            auth.logout()
+            router.push('/login')
+            return { user: null }
+          }
+          return { user: null }
+        }
         return await response.json()
       } catch (error) {
         console.error('Error fetching user:', error)
@@ -55,7 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextState = {
     user: data?.user || null,
     isLoading: isUserLoading || auth.isLoading,
-    error: auth.error,
+    error:
+      auth.error || (userError instanceof Error ? userError.message : null),
     login: auth.login,
     loginCasso: auth.loginCasso,
     logout: auth.logout,

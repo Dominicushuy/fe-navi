@@ -1,0 +1,64 @@
+# secrets:
+# POC_ENV
+# AWS_ROLE_ARN_POC
+
+name: POC CI/CD
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-1
+  PROJECT_ENV: ${{ secrets.POC_ENV }}
+  DOCKER_NAME: at-example/at-example-poc-fe
+  ECS_CLUSTER_NAME: at-example-poc-cluster
+  ECS_SERVICE_NAME: at-example-poc-fe
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_POC }}
+          role-session-name: GitHubActionsWorkflow
+          role-duration-seconds: 900
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set Environments
+        run: |
+          echo "ECR_REPOSITORY=${{ steps.login-ecr.outputs.registry }}/${{ env.DOCKER_NAME }}" >> $GITHUB_ENV
+          echo "${{ env.PROJECT_ENV }}" > .env
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.DOCKER_NAME }}:latest .
+
+      - name: Tag image, and push image to ECR Repository
+        run: |
+          aws ecr put-image-tag-mutability --repository-name ${{ env.DOCKER_NAME }} --image-tag-mutability MUTABLE
+          docker tag ${{ env.DOCKER_NAME }}:latest ${{ env.ECR_REPOSITORY }}:latest
+          docker push -a ${{ env.ECR_REPOSITORY }}
+          aws ecr put-image-tag-mutability --repository-name ${{ env.DOCKER_NAME }} --image-tag-mutability IMMUTABLE
+
+      - name: Update Amazon ECS Service
+        run: |
+          aws ecs update-service --service ${{ env.ECS_SERVICE_NAME }} --cluster ${{ env.ECS_CLUSTER_NAME }} --force-new-deployment
