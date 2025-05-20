@@ -1,7 +1,7 @@
 // components/tables/server-data-table.tsx
 'use client'
 
-import { ColumnDef } from '@tanstack/react-table'
+import { ColumnDef, RowData, CellContext } from '@tanstack/react-table'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
@@ -23,6 +23,19 @@ import {
 import { useServerTable } from '@/hooks/use-server-table'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+
+// Define custom column meta type
+interface CustomColumnMeta {
+  width?: string
+  minWidth?: string
+  maxWidth?: string
+}
+
+// Extend RowData to include custom column meta
+declare module '@tanstack/react-table' {
+  interface ColumnMeta<TData extends RowData, TValue>
+    extends CustomColumnMeta {}
+}
 
 interface ServerDataTableProps<TData> {
   columns: ColumnDef<TData, any>[]
@@ -98,6 +111,28 @@ export function ServerDataTable<TData>({
       return content()
     }
     return content
+  }
+
+  // Helper to safely render cell content with fallback
+  const renderCellContent = (column: ColumnDef<TData, any>, row: any) => {
+    if (column.cell) {
+      // Check if cell is a function
+      if (typeof column.cell === 'function') {
+        const cellContext = {
+          row,
+          column,
+          getValue: row.getValue,
+        } as unknown as CellContext<TData, any>
+
+        return column.cell(cellContext)
+      }
+
+      // If cell is not a function, return it directly
+      return column.cell
+    }
+
+    // Fallback: display the raw value from the row
+    return row.getValue(column.id as string)
   }
 
   // Dynamically create style for max-height
@@ -219,7 +254,7 @@ export function ServerDataTable<TData>({
                           return (
                             <TableCell
                               key={`${index}-${column.id}`}
-                              content={renderCellOrHeader(column.cell({ row }))}
+                              content={renderCellContent(column, row)} // Using the updated helper function
                               rawValue={rawValue}
                               width={width}
                               minWidth={minWidth}

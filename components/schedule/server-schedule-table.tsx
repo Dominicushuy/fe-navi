@@ -1,7 +1,7 @@
 // components/schedule/server-schedule-table.tsx
 'use client'
 
-import { ColumnDef } from '@tanstack/react-table'
+import { ColumnDef, Row } from '@tanstack/react-table'
 import { ScheduledJob } from '@/actions/schedule'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
@@ -273,49 +273,63 @@ export function ServerScheduleTable({
         ]
         return !skipFields.includes(key)
       })
-      .map(([key, header]) => ({
-        accessorKey: key,
-        id: key,
-        // Meta can be used to pass additional information like width
-        meta: {
-          width: columnWidths[key] || '180px',
-        },
-        header: () => (
-          <div className='font-semibold text-foreground'>
-            {t(key, { defaultValue: header })}
-          </div>
-        ),
-        cell: ({ row }) => {
-          const value = row.getValue(key)
+      .map(([key, header]) => {
+        // Get width settings for this column
+        const widthSettings = columnWidths[key] || {
+          width: '180px',
+          minWidth: '120px',
+          maxWidth: '250px',
+        }
 
-          // Handle different types of data
-          if (typeof value === 'boolean') {
-            return value ? t('yes') : t('no')
-          } else if (key === 'modified') {
-            // Format date
-            return new Date(value as string).toLocaleString()
-          } else if (Array.isArray(value)) {
-            return value.join(', ')
-          }
-
-          return (
-            <div className='truncate' title={String(value || '')}>
-              {value as React.ReactNode}
+        // Return the column definition with correctly structured meta property
+        return {
+          accessorKey: key,
+          id: key,
+          // Correctly set the meta properties
+          meta: {
+            width: widthSettings.width,
+            minWidth: widthSettings.minWidth,
+            maxWidth: widthSettings.maxWidth,
+          },
+          header: () => (
+            <div className='font-semibold text-foreground'>
+              {t(key, { defaultValue: header })}
             </div>
-          )
-        },
-      }))
+          ),
+          cell: ({ row }: { row: Row<ScheduledJob> }) => {
+            const value = row.getValue(key)
+
+            // Handle different types of data
+            if (typeof value === 'boolean') {
+              return value ? t('yes') : t('no')
+            } else if (key === 'modified') {
+              // Format date
+              return new Date(value as string).toLocaleString()
+            } else if (Array.isArray(value)) {
+              return value.join(', ')
+            }
+
+            return (
+              <div className='truncate' title={String(value || '')}>
+                {value as React.ReactNode}
+              </div>
+            )
+          },
+        }
+      })
 
     // Add an actions column
     const actionsColumn: ColumnDef<ScheduledJob> = {
       id: 'actions',
       meta: {
         width: '120px',
+        minWidth: '100px',
+        maxWidth: '150px',
       },
       header: () => (
         <div className='text-right font-semibold'>{t('actions')}</div>
       ),
-      cell: ({ row }) => {
+      cell: ({ row }: { row: Row<ScheduledJob> }) => {
         const job = row.original
         const isActive = job.status === 'ACTIVE'
 
