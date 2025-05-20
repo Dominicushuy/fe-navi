@@ -184,52 +184,79 @@ export function ServerScheduleTable({
   // Define the columns for the table
   const columns = getColumns()
 
-  // components/schedule/server-schedule-table.tsx (đoạn getColumns)
+  // Get columns with specific column widths
   function getColumns(): ColumnDef<ScheduledJob>[] {
-    // Định nghĩa chiều rộng cột dựa vào key
-    const columnWidths: Record<string, string> = {
-      username: '150px',
-      external_linked: '150px',
-      setting_id: '150px',
-      status: '150px',
-      job_name: '300px',
-      job_status: '150px',
-      modified: '200px',
-      is_maintaining: '180px',
-      media: '150px',
-      media_master_update: '200px',
-      scheduler_weekday: '180px',
-      scheduler_time: '150px',
-      time: '120px',
-      cube_off: '150px',
-      conmane_off: '150px',
-      redownload_type: '200px',
-      redownload: '150px',
-      master_update_redownload_type: '250px',
-      master_update_redownload: '200px',
-      upload: '120px',
-      upload_opemane: '180px',
-      opemane: '150px',
-      split_medias: '180px',
-      split_days: '150px',
-      which_process: '180px',
-      cad_inform: '150px',
-      conmane_confirm: '180px',
-      group_by: '150px',
-      cad_id: '150px',
-      wait_time: '150px',
-      spreadsheet_id: '250px',
-      spreadsheet_sheet: '200px',
-      drive_folder: '250px',
-      old_drive_folder: '250px',
-      custom_info: '200px',
-      master_account: '180px',
-      skip_to: '150px',
-      use_api: '150px',
-      workplace: '150px',
-      chanel_id: '150px',
-      slack_id: '150px',
-      actions: '120px', // Cột action nhỏ hơn
+    // Define column widths based on key
+    const columnWidths: Record<
+      string,
+      { width: string; minWidth: string; maxWidth: string }
+    > = {
+      username: { width: '150px', minWidth: '120px', maxWidth: '200px' },
+      external_linked: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      setting_id: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      status: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      job_name: { width: '300px', minWidth: '200px', maxWidth: '400px' },
+      job_status: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      modified: { width: '200px', minWidth: '180px', maxWidth: '250px' },
+      is_maintaining: { width: '180px', minWidth: '150px', maxWidth: '200px' },
+      media: { width: '150px', minWidth: '120px', maxWidth: '250px' },
+      media_master_update: {
+        width: '200px',
+        minWidth: '180px',
+        maxWidth: '250px',
+      },
+      scheduler_weekday: {
+        width: '180px',
+        minWidth: '150px',
+        maxWidth: '200px',
+      },
+      scheduler_time: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      time: { width: '120px', minWidth: '100px', maxWidth: '150px' },
+      cube_off: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      conmane_off: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      redownload_type: { width: '200px', minWidth: '180px', maxWidth: '250px' },
+      redownload: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      master_update_redownload_type: {
+        width: '250px',
+        minWidth: '200px',
+        maxWidth: '300px',
+      },
+      master_update_redownload: {
+        width: '200px',
+        minWidth: '180px',
+        maxWidth: '250px',
+      },
+      upload: { width: '120px', minWidth: '100px', maxWidth: '150px' },
+      upload_opemane: { width: '180px', minWidth: '150px', maxWidth: '200px' },
+      opemane: { width: '150px', minWidth: '120px', maxWidth: '200px' },
+      split_medias: { width: '180px', minWidth: '150px', maxWidth: '250px' },
+      split_days: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      which_process: { width: '180px', minWidth: '150px', maxWidth: '200px' },
+      cad_inform: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      conmane_confirm: { width: '180px', minWidth: '150px', maxWidth: '200px' },
+      group_by: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      cad_id: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      wait_time: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      spreadsheet_id: { width: '250px', minWidth: '200px', maxWidth: '300px' },
+      spreadsheet_sheet: {
+        width: '200px',
+        minWidth: '180px',
+        maxWidth: '250px',
+      },
+      drive_folder: { width: '250px', minWidth: '200px', maxWidth: '400px' },
+      old_drive_folder: {
+        width: '250px',
+        minWidth: '200px',
+        maxWidth: '400px',
+      },
+      custom_info: { width: '200px', minWidth: '150px', maxWidth: '300px' },
+      master_account: { width: '180px', minWidth: '150px', maxWidth: '250px' },
+      skip_to: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      use_api: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      workplace: { width: '150px', minWidth: '120px', maxWidth: '200px' },
+      chanel_id: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      slack_id: { width: '150px', minWidth: '120px', maxWidth: '180px' },
+      actions: { width: '120px', minWidth: '100px', maxWidth: '150px' },
     }
 
     // Create columns from the columnMapping
@@ -249,7 +276,7 @@ export function ServerScheduleTable({
       .map(([key, header]) => ({
         accessorKey: key,
         id: key,
-        // Meta có thể dùng để truyền thông tin bổ sung như chiều rộng
+        // Meta can be used to pass additional information like width
         meta: {
           width: columnWidths[key] || '180px',
         },
@@ -401,7 +428,7 @@ export function ServerScheduleTable({
       totalCount={totalCount}
       searchPlaceholder={t('searchJobs')}
       searchValue={searchValue}
-      // maxHeight='70vh'
+      maxHeight='70vh'
     />
   )
 }

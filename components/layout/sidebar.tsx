@@ -119,7 +119,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className='w-72 bg-gradient-to-b from-sidebar to-sidebar/95 text-sidebar-foreground border-r border-sidebar-border/40 min-h-screen flex flex-col shadow-md'>
+    <aside className='w-72 flex-shrink-0 bg-gradient-to-b from-sidebar to-sidebar/95 text-sidebar-foreground border-r border-sidebar-border/40 h-screen flex flex-col shadow-md overflow-hidden'>
       {/* Logo and Title */}
       <div className='p-5 border-b border-sidebar-border/40 flex items-center gap-3'>
         <div className='relative w-10 h-10 bg-sidebar-primary/20 rounded-md overflow-hidden flex items-center justify-center shadow-inner'>

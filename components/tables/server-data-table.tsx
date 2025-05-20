@@ -4,15 +4,15 @@
 import { ColumnDef } from '@tanstack/react-table'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { TableCell } from '@/components/tables/TableCell'
 import { Button } from '@/components/ui/button'
 import {
   ChevronLeft,
@@ -45,13 +45,36 @@ export function ServerDataTable<TData>({
   totalCount,
   searchPlaceholder = 'Search...',
   searchValue = '',
-  maxHeight = '70vh', // Mặc định chiều cao tối đa
+  maxHeight = '70vh', // Default max height
 }: ServerDataTableProps<TData>) {
   const pathname = usePathname()
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState<number | null>(null)
 
   const { search, setSearch, handleSearch, goToPage } = useServerTable({
     initialSearch: searchValue,
   })
+
+  // Update container width on resize
+  useEffect(() => {
+    if (!tableContainerRef.current) return
+
+    const updateWidth = () => {
+      if (tableContainerRef.current) {
+        setContainerWidth(tableContainerRef.current.clientWidth)
+      }
+    }
+
+    // Initial width
+    updateWidth()
+
+    // Add resize listener
+    window.addEventListener('resize', updateWidth)
+
+    return () => {
+      window.removeEventListener('resize', updateWidth)
+    }
+  }, [])
 
   // Calculate visible range
   const { page, pageCount, limit } = pagination
@@ -82,7 +105,7 @@ export function ServerDataTable<TData>({
     typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight
 
   return (
-    <div className='space-y-4'>
+    <div className='space-y-4 w-full'>
       {/* Search field */}
       <div className='flex items-center'>
         <form onSubmit={handleSearch} className='relative flex-1 max-w-sm'>
@@ -96,48 +119,59 @@ export function ServerDataTable<TData>({
         </form>
       </div>
 
-      {/* Responsive Table Container with fixed header */}
-      <div className='rounded-md border'>
-        <div className='data-table-container'>
+      {/* Table Container with proper nesting for fixed header and scrolling */}
+      <div className='data-table-container' ref={tableContainerRef}>
+        <div className='table-scroll-container'>
           <div
-            className='fixed-data-wrapper'
+            className='table-scroll-body'
             style={{ maxHeight: maxHeightStyle }}>
             <Table className='fixed-header-table'>
-              <TableHeader className='fixed-header'>
-                <TableRow className='border-b-0'>
-                  {columns.map((column, colIndex) => (
-                    <TableHead
-                      key={column.id}
-                      className={cn(
-                        'py-3 px-4 font-semibold text-foreground bg-muted/90 border-b-2 border-primary/20',
-                        colIndex === 0 &&
-                          'sticky left-0 z-20 bg-muted/95 backdrop-blur-sm'
-                      )}
-                      style={{
-                        // Lấy chiều rộng từ meta nếu có
-                        minWidth:
-                          column.meta?.width || column.id === 'actions'
-                            ? '120px'
-                            : column.id === 'modified'
-                            ? '200px'
-                            : column.id === 'job_name'
-                            ? '300px'
-                            : '180px',
-                        maxWidth:
-                          column.meta?.width || column.id === 'actions'
-                            ? '150px'
-                            : column.id === 'modified'
-                            ? '200px'
-                            : column.id === 'job_name'
-                            ? '300px'
-                            : '250px',
-                      }}>
-                      {renderCellOrHeader(column.header)}
-                    </TableHead>
-                  ))}
+              <TableHeader className='table-header-group'>
+                <TableRow>
+                  {columns.map((column, colIndex) => {
+                    // Xác định chiều rộng cột dựa trên metadata hoặc ID
+                    const width =
+                      column.meta?.width ||
+                      (column.id === 'actions'
+                        ? '120px'
+                        : column.id === 'modified'
+                        ? '200px'
+                        : column.id === 'job_name'
+                        ? '300px'
+                        : '180px')
+
+                    // Xác định min/max width dựa trên loại cột
+                    const minWidth =
+                      column.meta?.minWidth ||
+                      (column.id === 'actions' ? '100px' : '120px')
+
+                    const maxWidth =
+                      column.meta?.maxWidth ||
+                      (column.id === 'actions'
+                        ? '150px'
+                        : column.id === 'job_name'
+                        ? '300px'
+                        : '250px')
+
+                    return (
+                      <TableHead
+                        key={column.id}
+                        className={cn(
+                          'table-header-cell',
+                          colIndex === 0 && 'sticky-first-column-header'
+                        )}
+                        style={{
+                          width: width,
+                          minWidth: minWidth,
+                          maxWidth: maxWidth,
+                        }}>
+                        {renderCellOrHeader(column.header)}
+                      </TableHead>
+                    )
+                  })}
                 </TableRow>
               </TableHeader>
-              <TableBody className='table-body'>
+              <TableBody>
                 {data.length > 0 ? (
                   data.map((record, index) => {
                     // Create a mock row that behaves like TanStack Table row
@@ -146,45 +180,60 @@ export function ServerDataTable<TData>({
                     return (
                       <TableRow
                         key={index}
-                        className={
-                          index % 2 === 0 ? 'bg-background' : 'bg-muted/30'
-                        }>
-                        {columns.map((column, colIndex) => (
-                          <TableCell
-                            key={`${index}-${column.id}`}
-                            className={cn(
-                              'py-3 px-4 border-b',
-                              'overflow-hidden',
-                              colIndex === 0 && 'sticky left-0 z-10 bg-inherit'
-                            )}
-                            style={{
-                              // Lấy chiều rộng từ meta nếu có
-                              minWidth:
-                                column.meta?.width || column.id === 'actions'
-                                  ? '120px'
-                                  : column.id === 'modified'
-                                  ? '200px'
-                                  : column.id === 'job_name'
-                                  ? '300px'
-                                  : '180px',
-                              maxWidth:
-                                column.meta?.width || column.id === 'actions'
-                                  ? '150px'
-                                  : column.id === 'modified'
-                                  ? '200px'
-                                  : column.id === 'job_name'
-                                  ? '300px'
-                                  : '250px',
-                            }}>
-                            <div
-                              className='truncate cell-truncate'
-                              title={String(
-                                (record as any)[column.id as string] || ''
-                              )}>
-                              {renderCellOrHeader(column.cell({ row }))}
-                            </div>
-                          </TableCell>
-                        ))}
+                        className={cn(
+                          'table-row',
+                          index % 2 === 0 ? 'table-row-even' : 'table-row-odd'
+                        )}>
+                        {columns.map((column, colIndex) => {
+                          // Lấy giá trị nguyên bản cho tooltip
+                          const rawValue = String(
+                            (record as any)[column.id as string] || ''
+                          )
+
+                          // Xác định kích thước cột
+                          const width =
+                            column.meta?.width ||
+                            (column.id === 'actions'
+                              ? '120px'
+                              : column.id === 'modified'
+                              ? '200px'
+                              : column.id === 'job_name'
+                              ? '300px'
+                              : '180px')
+
+                          const minWidth =
+                            column.meta?.minWidth ||
+                            (column.id === 'actions' ? '100px' : '120px')
+
+                          const maxWidth =
+                            column.meta?.maxWidth ||
+                            (column.id === 'actions'
+                              ? '150px'
+                              : column.id === 'job_name'
+                              ? '300px'
+                              : '250px')
+
+                          // First column needs special handling for stickiness
+                          const isFirstColumn = colIndex === 0
+
+                          return (
+                            <TableCell
+                              key={`${index}-${column.id}`}
+                              content={renderCellOrHeader(column.cell({ row }))}
+                              rawValue={rawValue}
+                              width={width}
+                              minWidth={minWidth}
+                              maxWidth={maxWidth}
+                              className={cn(
+                                isFirstColumn && 'sticky-first-column',
+                                isFirstColumn &&
+                                  (index % 2 === 0
+                                    ? 'bg-background'
+                                    : 'bg-muted/30')
+                              )}
+                            />
+                          )
+                        })}
                       </TableRow>
                     )
                   })
@@ -192,9 +241,9 @@ export function ServerDataTable<TData>({
                   <TableRow>
                     <TableCell
                       colSpan={columns.length}
-                      className='h-24 text-center'>
-                      No results.
-                    </TableCell>
+                      content='No results.'
+                      className='h-24 text-center'
+                    />
                   </TableRow>
                 )}
               </TableBody>

@@ -78,7 +78,7 @@ export default async function SchedulePage({
   const pageCount = Math.ceil(jobsData.count / limit)
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-6 w-full max-w-full'>
       <div>
         <h1 className='text-2xl font-bold tracking-tight'>
           {t('scheduleJob')}

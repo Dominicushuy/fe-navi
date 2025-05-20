@@ -151,74 +151,138 @@
   }
 }
 
-/* Add this to app/globals.css */
-@layer utilities {
-  .custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-800) var(--primary-950);
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: var(--primary-800);
-    border-radius: 20px;
-  }
-}
 
-/* Thêm vào app/globals.css */
-@layer components {
+@layer utilities {
+  /* Layout utilities */
+  .layout-container {
+    @apply flex min-h-screen h-screen overflow-hidden;
+  }
+  
+  .sidebar-fixed {
+    @apply w-72 flex-shrink-0 h-screen overflow-hidden;
+  }
+  
+  .content-wrapper {
+    @apply flex-1 flex flex-col h-screen overflow-hidden;
+  }
+  
+  .content-area {
+    @apply flex-1 p-6 overflow-auto;
+  }
+  
+  /* Table containers - điều chỉnh để hoạt động tốt trong không gian giới hạn */
   .data-table-container {
+    @apply w-full rounded-md border border-border overflow-hidden;
+    max-width: calc(100vw - 18rem - 3rem);
+  }
+  
+  .table-scroll-container {
     @apply w-full overflow-x-auto;
   }
   
-  .fixed-header-table {
-    @apply relative border-separate border-spacing-0 w-full table-auto;
-  }
-  
-  .fixed-header {
-    @apply sticky top-0 z-10 bg-muted/80 backdrop-blur-sm;
-  }
-  
-  .fixed-header th {
-    @apply font-semibold text-foreground py-3 px-4 border-b-2 border-primary/20 bg-muted/90;
-  }
-  
-  .fixed-header th:first-child,
-  .table-body td:first-child {
-    @apply sticky left-0 z-20 bg-muted/95 backdrop-blur-sm;
-  }
-  
-  .fixed-data-wrapper {
+  .table-scroll-body {
     @apply overflow-y-auto;
   }
-  
-  .cell-truncate {
-    @apply truncate max-w-full block;
+}
+
+@layer components {
+  /* Main table container with border */
+  .data-table-container {
+    @apply relative w-full overflow-hidden rounded-md border border-border;
   }
   
-  /* Zebra striping for rows */
-  .table-body tr:nth-child(even) {
-    @apply bg-muted/30;
+  /* Horizontal scroll container */
+  .table-scroll-container {
+    @apply w-full overflow-x-auto;
   }
   
-  .table-body tr:nth-child(odd) {
+  /* Vertical scroll container with fixed height */
+  .table-scroll-body {
+    @apply overflow-y-auto;
+    /* Height will be set via inline style */
+  }
+  
+  /* Table styling for fixed layout */
+  .fixed-header-table {
+    @apply w-full table-auto border-separate border-spacing-0;
+    /* Ensure border-collapse is reset for proper sticky behavior */
+  }
+  
+  /* Fixed header styling */
+  .table-header-group {
+    @apply sticky top-0 z-20 bg-muted/80 backdrop-blur-sm; 
+  }
+  
+  /* Header cells */
+  .table-header-cell {
+    @apply py-3 px-4 text-left align-middle font-semibold text-foreground;
+    @apply bg-muted/90 border-b-2 border-primary/20;
+    @apply whitespace-nowrap;
+  }
+  
+  /* Sticky first column */
+  .sticky-first-column {
+    @apply sticky left-0 z-10;
+  }
+  
+  /* First column header (double sticky - top and left) */
+  .sticky-first-column-header {
+    @apply sticky left-0 z-30 bg-muted/95 backdrop-blur-sm;
+  }
+  
+  /* Table body styling */
+  .table-body {
     @apply bg-background;
   }
   
-  /* Ensure sticky elements have proper backdrop */
-  .table-body tr td:first-child {
-    @apply backdrop-blur-sm;
+  /* Cell styling cho text overflow */
+  .table-cell {
+    @apply py-3 px-4 border-b align-middle relative;
+    overflow: hidden; /* Quan trọng để tránh overflow */
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  /* Cell content với text truncation tốt hơn */
+  .cell-content {
+    @apply block w-full overflow-hidden text-ellipsis whitespace-nowrap;
+    max-width: 100%; /* Đảm bảo không vượt quá width của cell */
+  }
+  
+  /* Tooltip styling khi hover cell */
+  .cell-tooltip {
+    @apply invisible absolute left-0 top-full z-50 mt-2 max-w-xs rounded-md
+           bg-popover p-2 text-sm text-popover-foreground shadow-md;
+    width: auto;
+    max-width: 300px; /* Giới hạn width của tooltip */
+    white-space: normal; /* Cho phép tooltip xuống dòng */
+    word-break: break-word; /* Ngắt từ nếu cần */
+  }
+  
+  /* Hiện tooltip khi hover */
+  .cell-wrapper:hover .cell-tooltip {
+    @apply visible;
+  }
+  
+  /* Đảm bảo các ô có chiều rộng cố định */
+  .fixed-width-cell {
+    @apply overflow-hidden;
+    width: var(--cell-width, auto);
+    min-width: var(--cell-min-width, 100px);
+    max-width: var(--cell-max-width, 300px);
+  }
+  
+  /* Zebra striping for rows */
+  .table-row-even {
+    @apply bg-background;
+  }
+  
+  .table-row-odd {
+    @apply bg-muted/30;
   }
   
   /* Hover effect for rows */
-  .table-body tr:hover {
+  .table-row:hover {
     @apply bg-muted/50;
   }
 }
