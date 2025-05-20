@@ -83,7 +83,7 @@ export async function getScheduledJobs(
   }
   const apiUrl = `${baseUrl}/job/scheduled-job/`
 
-  // Thay đổi này - sử dụng hàm mới
+  // Use the fetchWithPagination utility
   return fetchWithPagination<ScheduledJob>(
     apiUrl,
     page,

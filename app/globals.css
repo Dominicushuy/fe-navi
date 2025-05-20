@@ -285,4 +285,34 @@
   .table-row:hover {
     @apply bg-muted/50;
   }
+
+  /* Add sticky column styles */
+  .sticky-column-header {
+    position: sticky !important;
+    background-color: var(--muted) !important;
+    z-index: 30;
+  }
+  
+  .sticky-column-cell {
+    position: sticky !important;
+    z-index: 20;
+  }
+  
+  /* Shadow for sticky columns to create visual separation */
+  :root {
+    --shadow-sticky-column: 5px 0 5px -5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark {
+    --shadow-sticky-column: 5px 0 5px -5px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Alternate background color for table rows */
+  :root {
+    --muted-alt: var(--muted-30);
+  }
+  
+  .dark {
+    --muted-alt: var(--muted-30);
+  }
 }

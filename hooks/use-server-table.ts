@@ -13,6 +13,7 @@ interface ServerTableOptions {
 
 /**
  * Hook for managing server-side table state with URL parameters
+ * Handles search, pagination, and other table filter state
  */
 export function useServerTable({
   initialSearch = '',
@@ -60,12 +61,32 @@ export function useServerTable({
     router.push(`${pathname}${query}`)
   }
 
+  // Handler for changing sort criteria
+  const setSort = (field: string, direction: 'asc' | 'desc') => {
+    const query = createQueryString(searchParams, {
+      sort: field,
+      order: direction,
+    })
+    router.push(`${pathname}${query}`)
+  }
+
+  // Handler for changing filter values
+  const setFilter = (filters: Record<string, string | undefined>) => {
+    const query = createQueryString(searchParams, {
+      ...filters,
+      page: 1, // Reset to page 1 when filtering
+    })
+    router.push(`${pathname}${query}`)
+  }
+
   return {
     search,
     setSearch,
     handleSearch,
     goToPage,
     setLimit,
+    setSort,
+    setFilter,
     currentParams: Object.fromEntries(searchParams.entries()),
   }
 }

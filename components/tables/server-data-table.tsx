@@ -24,11 +24,13 @@ import { useServerTable } from '@/hooks/use-server-table'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
-// Define custom column meta type
+// Define custom column meta type with sticky properties
 interface CustomColumnMeta {
   width?: string
   minWidth?: string
   maxWidth?: string
+  isSticky?: boolean
+  stickyPosition?: number
 }
 
 // Extend RowData to include custom column meta
@@ -135,6 +137,23 @@ export function ServerDataTable<TData>({
     return row.getValue(column.id as string)
   }
 
+  // Helper to calculate left position for sticky columns
+  const calculateStickyLeftPosition = (columnIndex: number): string => {
+    let leftPosition = 0
+
+    // Find all sticky columns before this one and sum their widths
+    for (let i = 0; i < columnIndex; i++) {
+      const col = columns[i]
+      if (col.meta?.isSticky) {
+        // Extract width without 'px' and convert to number
+        const width = col.meta.width || '180px'
+        leftPosition += parseInt(width, 10)
+      }
+    }
+
+    return `${leftPosition}px`
+  }
+
   // Dynamically create style for max-height
   const maxHeightStyle =
     typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight
@@ -164,7 +183,7 @@ export function ServerDataTable<TData>({
               <TableHeader className='table-header-group'>
                 <TableRow>
                   {columns.map((column, colIndex) => {
-                    // Xác định chiều rộng cột dựa trên metadata hoặc ID
+                    // Determine column styles based on metadata
                     const width =
                       column.meta?.width ||
                       (column.id === 'actions'
@@ -175,7 +194,6 @@ export function ServerDataTable<TData>({
                         ? '300px'
                         : '180px')
 
-                    // Xác định min/max width dựa trên loại cột
                     const minWidth =
                       column.meta?.minWidth ||
                       (column.id === 'actions' ? '100px' : '120px')
@@ -188,17 +206,37 @@ export function ServerDataTable<TData>({
                         ? '300px'
                         : '250px')
 
+                    // Check if this column is sticky
+                    const isSticky = column.meta?.isSticky || false
+                    const stickyPosition = column.meta?.stickyPosition || 0
+
+                    // Calculate left position for sticky columns
+                    const leftPosition = isSticky
+                      ? calculateStickyLeftPosition(colIndex)
+                      : undefined
+
+                    // Calculate z-index for sticky headers - higher position = lower z-index
+                    // This ensures proper layering when scrolling
+                    const zIndex = isSticky ? 40 - stickyPosition : undefined
+
                     return (
                       <TableHead
                         key={column.id}
                         className={cn(
                           'table-header-cell',
-                          colIndex === 0 && 'sticky-first-column-header'
+                          isSticky && 'sticky-column-header'
                         )}
                         style={{
-                          width: width,
-                          minWidth: minWidth,
-                          maxWidth: maxWidth,
+                          width,
+                          minWidth,
+                          maxWidth,
+                          ...(isSticky && {
+                            position: 'sticky',
+                            left: leftPosition,
+                            zIndex,
+                            backgroundColor: 'var(--muted)', // Ensure background is solid
+                            boxShadow: 'var(--shadow-sticky-column)',
+                          }),
                         }}>
                         {renderCellOrHeader(column.header)}
                       </TableHead>
@@ -211,6 +249,9 @@ export function ServerDataTable<TData>({
                   data.map((record, index) => {
                     // Create a mock row that behaves like TanStack Table row
                     const row = createTableRow(record, index)
+                    // Determine row background based on even/odd
+                    const rowBg =
+                      index % 2 === 0 ? 'var(--background)' : 'var(--muted-alt)'
 
                     return (
                       <TableRow
@@ -220,12 +261,12 @@ export function ServerDataTable<TData>({
                           index % 2 === 0 ? 'table-row-even' : 'table-row-odd'
                         )}>
                         {columns.map((column, colIndex) => {
-                          // Lấy giá trị nguyên bản cho tooltip
+                          // Get raw value for tooltip
                           const rawValue = String(
                             (record as any)[column.id as string] || ''
                           )
 
-                          // Xác định kích thước cột
+                          // Determine column styles based on metadata
                           const width =
                             column.meta?.width ||
                             (column.id === 'actions'
@@ -248,24 +289,39 @@ export function ServerDataTable<TData>({
                               ? '300px'
                               : '250px')
 
-                          // First column needs special handling for stickiness
-                          const isFirstColumn = colIndex === 0
+                          // Check if this column is sticky
+                          const isSticky = column.meta?.isSticky || false
+                          const stickyPosition =
+                            column.meta?.stickyPosition || 0
+
+                          // Calculate left position for sticky columns
+                          const leftPosition = isSticky
+                            ? calculateStickyLeftPosition(colIndex)
+                            : undefined
+
+                          // Calculate z-index for sticky columns - higher position = lower z-index
+                          const zIndex = isSticky
+                            ? 30 - stickyPosition
+                            : undefined
 
                           return (
                             <TableCell
                               key={`${index}-${column.id}`}
-                              content={renderCellContent(column, row)} // Using the updated helper function
+                              content={renderCellContent(column, row)}
                               rawValue={rawValue}
                               width={width}
                               minWidth={minWidth}
                               maxWidth={maxWidth}
-                              className={cn(
-                                isFirstColumn && 'sticky-first-column',
-                                isFirstColumn &&
-                                  (index % 2 === 0
-                                    ? 'bg-background'
-                                    : 'bg-muted/30')
-                              )}
+                              className={cn(isSticky && 'sticky-column-cell')}
+                              style={{
+                                ...(isSticky && {
+                                  position: 'sticky',
+                                  left: leftPosition,
+                                  zIndex,
+                                  backgroundColor: rowBg, // Use row background
+                                  boxShadow: 'var(--shadow-sticky-column)',
+                                }),
+                              }}
                             />
                           )
                         })}

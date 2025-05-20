@@ -23,6 +23,7 @@ interface ServerScheduleTabsProps {
 
 /**
  * Server-side rendered tabs component for switching between job types
+ * Uses URL-based navigation for preserving tab state during page refresh
  */
 export function ServerScheduleTabs({
   jobType,

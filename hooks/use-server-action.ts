@@ -15,8 +15,16 @@ export type ServerActionOptions<TData, TError, TVariables, TContext> = {
   invalidateTags?: string[]
   successMessage?: string
   errorMessage?: string
-  onSuccess?: (data: TData, variables: TVariables, context: TContext) => void
-  onError?: (error: TError, variables: TVariables, context: TContext) => void
+  onSuccess?: (
+    data: TData,
+    variables: TVariables,
+    context: TContext | undefined
+  ) => void
+  onError?: (
+    error: TError,
+    variables: TVariables,
+    context: TContext | undefined
+  ) => void
   mutationOptions?: Omit<
     UseMutationOptions<TData, TError, TVariables, TContext>,
     'mutationFn'
@@ -26,6 +34,7 @@ export type ServerActionOptions<TData, TError, TVariables, TContext> = {
 
 /**
  * Hook for using server actions with react-query
+ * Provides optimistic updates, error handling, and automatic query invalidation
  */
 export function useServerAction<
   TData,
@@ -70,13 +79,17 @@ export function useServerAction<
       }
 
       // Call the success callback
-      onSuccess?.(data, variables, context)
+      if (onSuccess) {
+        onSuccess(data, variables, context)
+      }
     },
     onError: (error, variables, context) => {
       console.error('Server action error:', error)
 
       // Call the error callback
-      onError?.(error, variables, context)
+      if (onError) {
+        onError(error, variables, context)
+      }
     },
     ...mutationOptions,
   })

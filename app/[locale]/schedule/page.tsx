@@ -17,27 +17,30 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 interface SchedulePageProps {
-  searchParams: { [key: string]: string | string[] | undefined }
+  params: { locale: string }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 export default async function SchedulePage({
+  params,
   searchParams,
 }: SchedulePageProps) {
   const t = await getTranslations('Schedule')
+  const resolvedSearchParams = await searchParams
 
   // Verify the user is authenticated with a valid session
   const user = await auth.requireAuth('/login?callbackUrl=/schedule')
 
   // Parse search parameters directly from searchParams
-  const { page, limit, search } = parseTableParams(searchParams)
+  const { page, limit, search } = parseTableParams(resolvedSearchParams)
 
   // Get job type from search params or default to 'NAVI'
   // Handle both string and string[] cases
   let jobType: 'NAVI' | 'CVER' = 'NAVI'
-  if (searchParams.jobType) {
-    const jobTypeParam = Array.isArray(searchParams.jobType)
-      ? searchParams.jobType[0]
-      : searchParams.jobType
+  if (resolvedSearchParams.jobType) {
+    const jobTypeParam = Array.isArray(resolvedSearchParams.jobType)
+      ? resolvedSearchParams.jobType[0]
+      : resolvedSearchParams.jobType
 
     if (jobTypeParam === 'CVER') {
       jobType = 'CVER'

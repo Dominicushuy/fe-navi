@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { TableCell as UITableCell } from '@/components/ui/table'
 
-// Sử dụng Omit để tránh xung đột type với thuộc tính "content"
+// Use Omit to avoid type conflict with "content" property
 interface TableCellProps extends Omit<React.ComponentProps<'td'>, 'content'> {
   content: React.ReactNode
   rawValue?: string
@@ -13,6 +13,7 @@ interface TableCellProps extends Omit<React.ComponentProps<'td'>, 'content'> {
   minWidth?: string
   maxWidth?: string
   tooltipDisabled?: boolean
+  style?: React.CSSProperties // Add style prop for sticky positioning
 }
 
 export function TableCell({
@@ -23,6 +24,7 @@ export function TableCell({
   maxWidth = '300px',
   tooltipDisabled = false,
   className,
+  style, // Accept style prop
   ...props
 }: TableCellProps) {
   const [showTooltip, setShowTooltip] = useState(false)
@@ -37,7 +39,7 @@ export function TableCell({
       const element = contentRef.current
       if (!element) return
 
-      // Kiểm tra nếu nội dung bị overflow
+      // Check if content is overflowing
       const isOverflowing = element.scrollWidth > element.clientWidth
       setShowTooltip(isOverflowing)
     }
@@ -56,18 +58,19 @@ export function TableCell({
     }
   }, [content, tooltipDisabled])
 
-  // Define dynamic styles
-  const style = {
+  // Define base styles
+  const baseStyle = {
     '--cell-width': width,
     '--cell-min-width': minWidth,
     '--cell-max-width': maxWidth,
+    ...style, // Merge provided styles
   } as React.CSSProperties
 
   return (
     <UITableCell
       ref={cellRef}
       className={cn('table-cell fixed-width-cell', className)}
-      style={style}
+      style={baseStyle}
       {...props}>
       <div className='cell-wrapper relative'>
         <div
