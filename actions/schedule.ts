@@ -3,7 +3,7 @@
 
 import { auth } from '@/lib/auth'
 import { revalidateTag } from 'next/cache'
-import { fetchPaginatedData } from './server-table'
+import { fetchWithPagination } from './server-table'
 
 // Type definitions
 export interface ScheduledJob {
@@ -77,28 +77,21 @@ export async function getScheduledJobs(
   limit: number = 20,
   search: string = ''
 ): Promise<ScheduledJobResponse> {
-  const user = await auth.getCurrentUser()
-  if (!user || !user.access) {
-    throw new Error('Not authenticated')
-  }
-
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
+  if (!baseUrl) {
+    throw new Error('API URL not configured')
+  }
   const apiUrl = `${baseUrl}/job/scheduled-job/`
 
-  const queryParams = new URLSearchParams({
-    is_deleted: 'false',
-    job_type: jobType,
+  // Thay đổi này - sử dụng hàm mới
+  return fetchWithPagination<ScheduledJob>(
+    apiUrl,
+    page,
+    limit,
     search,
-    page: page.toString(),
-    limit: limit.toString(),
-  })
-
-  return fetchPaginatedData<ScheduledJob>({
-    url: apiUrl,
-    queryParams,
-    tag: `scheduledJobs-${jobType}`,
-    revalidate: 60,
-  })
+    { is_deleted: 'false', job_type: jobType },
+    { tag: `scheduledJobs-${jobType}`, revalidate: 60 }
+  )
 }
 
 /**
@@ -113,6 +106,10 @@ export async function updateScheduledJob(
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
+  if (!baseUrl) {
+    throw new Error('API URL not configured')
+  }
+
   const apiUrl = `${baseUrl}/job/scheduled-job/${update.id}/`
 
   try {
@@ -133,7 +130,7 @@ export async function updateScheduledJob(
       )
     }
 
-    // Revalidate the tags after successful update
+    // Revalidate all scheduled job tags to ensure consistent data
     revalidateTag(`scheduledJobs-NAVI`)
     revalidateTag(`scheduledJobs-CVER`)
 
@@ -154,6 +151,10 @@ export async function deleteScheduledJob(id: string): Promise<void> {
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
+  if (!baseUrl) {
+    throw new Error('API URL not configured')
+  }
+
   const apiUrl = `${baseUrl}/job/scheduled-job/${id}/`
 
   try {
@@ -173,7 +174,7 @@ export async function deleteScheduledJob(id: string): Promise<void> {
       )
     }
 
-    // Revalidate the tags after successful deletion
+    // Revalidate all scheduled job tags to ensure consistent data
     revalidateTag(`scheduledJobs-NAVI`)
     revalidateTag(`scheduledJobs-CVER`)
   } catch (error) {
@@ -194,6 +195,10 @@ export async function createScheduledJob(
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL
+  if (!baseUrl) {
+    throw new Error('API URL not configured')
+  }
+
   const apiUrl = `${baseUrl}/job/scheduled-job/`
 
   try {
@@ -214,7 +219,7 @@ export async function createScheduledJob(
       )
     }
 
-    // Revalidate the tags after successful creation
+    // Revalidate all scheduled job tags to ensure consistent data
     revalidateTag(`scheduledJobs-NAVI`)
     revalidateTag(`scheduledJobs-CVER`)
 

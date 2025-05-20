@@ -59,3 +59,45 @@ export function createPaginationParams(page: number, limit: number) {
     offset: Math.max(0, (page - 1) * limit),
   }
 }
+
+/**
+ * Create a query string from search params and additional parameters
+ * @param searchParams Current search parameters
+ * @param params Additional parameters to add or override
+ * @returns Query string starting with '?' or empty string if no parameters
+ */
+export function createQueryString(
+  searchParams: URLSearchParams | Record<string, string | string[] | undefined>,
+  params: Record<string, any>
+): string {
+  // Convert searchParams to a URLSearchParams object if it's not already
+  const newParams =
+    searchParams instanceof URLSearchParams
+      ? new URLSearchParams(searchParams.toString())
+      : new URLSearchParams()
+
+  // If searchParams is a Record, add its entries to newParams
+  if (!(searchParams instanceof URLSearchParams)) {
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (value !== undefined) {
+        if (Array.isArray(value)) {
+          value.forEach((v) => newParams.append(key, v))
+        } else {
+          newParams.set(key, value)
+        }
+      }
+    })
+  }
+
+  // Add or update parameters
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) {
+      newParams.delete(key)
+    } else {
+      newParams.set(key, value.toString())
+    }
+  })
+
+  const query = newParams.toString()
+  return query ? `?${query}` : ''
+}

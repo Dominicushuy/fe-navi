@@ -22,6 +22,7 @@ export interface FetchPaginatedDataOptions {
   headers?: HeadersInit
   tag?: string
   revalidate?: number
+  useAuth?: boolean
 }
 
 /**
@@ -35,14 +36,17 @@ export async function fetchPaginatedData<T>({
   headers = {},
   tag,
   revalidate = 60,
+  useAuth = true,
 }: FetchPaginatedDataOptions): Promise<PaginatedResponse<T>> {
-  // Get auth user and add authorization if available
-  const user = await auth.getCurrentUser()
+  // Get auth user and add authorization if available and requested
   let authHeaders: HeadersInit = {}
 
-  if (user?.access) {
-    authHeaders = {
-      Authorization: `Bearer ${user.access}`,
+  if (useAuth) {
+    const user = await auth.getCurrentUser()
+    if (user?.access) {
+      authHeaders = {
+        Authorization: `Bearer ${user.access}`,
+      }
     }
   }
 
@@ -82,23 +86,33 @@ export async function fetchPaginatedData<T>({
 }
 
 /**
- * Generic helper to create paginated API fetchers for specific entities
- * @param baseUrl Base API URL
- * @param tag Cache tag for revalidation
- * @param defaultParams Default query parameters
- * @returns A function that fetches paginated data with the specified configuration
+ * Parameters type for pagination fetcher
  */
-export function createPaginatedFetcher<T>(
+export type PaginationFetcherParams = {
+  page?: number
+  limit?: number
+  search?: string
+  additionalParams?: Record<string, string>
+}
+
+/**
+ * Create a function to fetch paginated data
+ * This function itself is a Server Action, but it returns a function that can be called elsewhere
+ */
+export async function createPaginatedFetcher<T>(
   baseUrl: string,
   tag?: string,
-  defaultParams: Record<string, string> = {}
-) {
-  return async (
-    page: number = 1,
-    limit: number = 20,
-    search: string = '',
-    additionalParams: Record<string, string> = {}
-  ): Promise<PaginatedResponse<T>> => {
+  defaultParams: Record<string, string> = {},
+  options: { useAuth?: boolean; revalidate?: number } = {}
+): Promise<(params: PaginationFetcherParams) => Promise<PaginatedResponse<T>>> {
+  // Return an async function that can be called with pagination parameters
+  return async ({
+    page = 1,
+    limit = 20,
+    search = '',
+    additionalParams = {},
+  }: PaginationFetcherParams): Promise<PaginatedResponse<T>> => {
+    // Create search params
     const queryParams = new URLSearchParams({
       ...defaultParams,
       page: page.toString(),
@@ -107,11 +121,52 @@ export function createPaginatedFetcher<T>(
       ...additionalParams,
     })
 
+    // Create a specific tag for this query if base tag is provided
+    const searchTag = search ? `-search-${encodeURIComponent(search)}` : ''
+    const queryTag = tag
+      ? `${tag}-page-${page}-limit-${limit}${searchTag}`
+      : undefined
+
     return fetchPaginatedData<T>({
       url: baseUrl,
       queryParams,
-      tag,
-      revalidate: 60,
+      tag: queryTag,
+      revalidate: options.revalidate ?? 60,
+      useAuth: options.useAuth ?? true,
     })
   }
+}
+
+/**
+ * Helper function to fetch paginated data directly with parameters
+ */
+export async function fetchWithPagination<T>(
+  baseUrl: string,
+  page: number = 1,
+  limit: number = 20,
+  search: string = '',
+  additionalParams: Record<string, string> = {},
+  options: { tag?: string; revalidate?: number; useAuth?: boolean } = {}
+): Promise<PaginatedResponse<T>> {
+  // Create search params
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    ...(search ? { search } : {}),
+    ...additionalParams,
+  })
+
+  // Create a specific tag for this query if base tag is provided
+  const searchTag = search ? `-search-${encodeURIComponent(search)}` : ''
+  const queryTag = options.tag
+    ? `${options.tag}-page-${page}-limit-${limit}${searchTag}`
+    : undefined
+
+  return fetchPaginatedData<T>({
+    url: baseUrl,
+    queryParams,
+    tag: queryTag,
+    revalidate: options.revalidate ?? 60,
+    useAuth: options.useAuth ?? true,
+  })
 }

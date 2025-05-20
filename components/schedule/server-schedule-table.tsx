@@ -21,6 +21,9 @@ import { ServerDataTable } from '@/components/tables/server-data-table'
 import { toast } from '@/components/ui/toast'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { updateScheduledJob, deleteScheduledJob } from '@/actions/schedule'
+import { useServerAction } from '@/hooks/use-server-action'
+import { useQueryClient } from '@tanstack/react-query'
 
 // Mapping for column keys to display names
 const columnMapping: Record<string, string> = {
@@ -94,14 +97,141 @@ export function ServerScheduleTable({
   const t = useTranslations('Schedule')
   const router = useRouter()
   const pathname = usePathname()
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [isUpdating, setIsUpdating] = useState(false)
-  const [jobToDelete, setJobToDelete] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  // Get the tag for this job type
+  const jobTypeTag = `scheduledJobs-${jobType}`
+
+  // Use the server action wrapper for updateJob with optimistic updates
+  const updateJobMutation = useServerAction({
+    action: updateScheduledJob,
+    invalidateTags: [jobTypeTag],
+    successMessage: t('successfullyUpdated'),
+    errorMessage: t('errorUpdating'),
+    refreshOnSuccess: true,
+    mutationOptions: {
+      // Add optimistic update
+      onMutate: async (newJob) => {
+        // Cancel outgoing refetches
+        await queryClient.cancelQueries({ queryKey: [jobTypeTag] })
+
+        // Snapshot the previous value
+        const previousJobs = queryClient.getQueryData([jobTypeTag])
+
+        // Optimistically update to the new value
+        queryClient.setQueryData([jobTypeTag], (old: any) => {
+          if (!old) return old
+
+          // Create a copy of the results with the updated job
+          return {
+            ...old,
+            results: old.results.map((job: ScheduledJob) =>
+              job.id === newJob.id ? { ...job, ...newJob } : job
+            ),
+          }
+        })
+
+        // Return a context object with the snapshot
+        return { previousJobs }
+      },
+      // If the mutation fails, roll back to the previous value
+      onError: (err, newJob, context) => {
+        queryClient.setQueryData([jobTypeTag], context?.previousJobs)
+      },
+    },
+  })
+
+  // Use the server action wrapper for deleteJob with optimistic updates
+  const deleteJobMutation = useServerAction({
+    action: deleteScheduledJob,
+    invalidateTags: [jobTypeTag],
+    successMessage: t('successfullyDeleted'),
+    errorMessage: t('errorDeleting'),
+    refreshOnSuccess: true,
+    mutationOptions: {
+      // Add optimistic update
+      onMutate: async (jobId) => {
+        // Cancel outgoing refetches
+        await queryClient.cancelQueries({ queryKey: [jobTypeTag] })
+
+        // Snapshot the previous value
+        const previousJobs = queryClient.getQueryData([jobTypeTag])
+
+        // Optimistically update to the new value
+        queryClient.setQueryData([jobTypeTag], (old: any) => {
+          if (!old) return old
+
+          // Create a copy of the results without the deleted job
+          return {
+            ...old,
+            count: old.count - 1,
+            results: old.results.filter(
+              (job: ScheduledJob) => job.id !== jobId
+            ),
+          }
+        })
+
+        // Return a context object with the snapshot
+        return { previousJobs }
+      },
+      // If the mutation fails, roll back to the previous value
+      onError: (err, jobId, context) => {
+        queryClient.setQueryData([jobTypeTag], context?.previousJobs)
+      },
+    },
+  })
 
   // Define the columns for the table
   const columns = getColumns()
 
+  // components/schedule/server-schedule-table.tsx (đoạn getColumns)
   function getColumns(): ColumnDef<ScheduledJob>[] {
+    // Định nghĩa chiều rộng cột dựa vào key
+    const columnWidths: Record<string, string> = {
+      username: '150px',
+      external_linked: '150px',
+      setting_id: '150px',
+      status: '150px',
+      job_name: '300px',
+      job_status: '150px',
+      modified: '200px',
+      is_maintaining: '180px',
+      media: '150px',
+      media_master_update: '200px',
+      scheduler_weekday: '180px',
+      scheduler_time: '150px',
+      time: '120px',
+      cube_off: '150px',
+      conmane_off: '150px',
+      redownload_type: '200px',
+      redownload: '150px',
+      master_update_redownload_type: '250px',
+      master_update_redownload: '200px',
+      upload: '120px',
+      upload_opemane: '180px',
+      opemane: '150px',
+      split_medias: '180px',
+      split_days: '150px',
+      which_process: '180px',
+      cad_inform: '150px',
+      conmane_confirm: '180px',
+      group_by: '150px',
+      cad_id: '150px',
+      wait_time: '150px',
+      spreadsheet_id: '250px',
+      spreadsheet_sheet: '200px',
+      drive_folder: '250px',
+      old_drive_folder: '250px',
+      custom_info: '200px',
+      master_account: '180px',
+      skip_to: '150px',
+      use_api: '150px',
+      workplace: '150px',
+      chanel_id: '150px',
+      slack_id: '150px',
+      actions: '120px', // Cột action nhỏ hơn
+    }
+
     // Create columns from the columnMapping
     const baseColumns = Object.entries(columnMapping)
       .filter(([key]) => {
@@ -118,7 +248,16 @@ export function ServerScheduleTable({
       })
       .map(([key, header]) => ({
         accessorKey: key,
-        header: () => <div>{t(key, { defaultValue: header })}</div>,
+        id: key,
+        // Meta có thể dùng để truyền thông tin bổ sung như chiều rộng
+        meta: {
+          width: columnWidths[key] || '180px',
+        },
+        header: () => (
+          <div className='font-semibold text-foreground'>
+            {t(key, { defaultValue: header })}
+          </div>
+        ),
         cell: ({ row }) => {
           const value = row.getValue(key)
 
@@ -133,7 +272,9 @@ export function ServerScheduleTable({
           }
 
           return (
-            <div className='whitespace-nowrap'>{value as React.ReactNode}</div>
+            <div className='truncate' title={String(value || '')}>
+              {value as React.ReactNode}
+            </div>
           )
         },
       }))
@@ -141,7 +282,12 @@ export function ServerScheduleTable({
     // Add an actions column
     const actionsColumn: ColumnDef<ScheduledJob> = {
       id: 'actions',
-      header: () => <div className='text-right'>{t('actions')}</div>,
+      meta: {
+        width: '120px',
+      },
+      header: () => (
+        <div className='text-right font-semibold'>{t('actions')}</div>
+      ),
       cell: ({ row }) => {
         const job = row.original
         const isActive = job.status === 'ACTIVE'
@@ -154,7 +300,7 @@ export function ServerScheduleTable({
               onClick={() =>
                 handleUpdateJob(job.id, isActive ? 'INACTIVE' : 'ACTIVE')
               }
-              disabled={isUpdating}
+              disabled={updateJobMutation.isLoading}
               title={isActive ? t('deactivateJob') : t('activateJob')}>
               {isActive ? (
                 <Pause className='h-4 w-4' />
@@ -189,8 +335,8 @@ export function ServerScheduleTable({
                 <AlertDialogFooter>
                   <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() => setJobToDelete(job.id)}
-                    disabled={isDeleting}>
+                    onClick={() => handleDeleteJob(job.id)}
+                    disabled={deleteJobMutation.isLoading}>
                     {t('delete')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -206,33 +352,19 @@ export function ServerScheduleTable({
 
   // Handle update job status
   async function handleUpdateJob(id: string, status: string) {
-    setIsUpdating(true)
     try {
-      const response = await fetch(`/api/schedule/jobs/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status }),
-      })
-
-      if (!response.ok) {
-        throw new Error(t('errorUpdating'))
-      }
+      await updateJobMutation.mutateAsync({ id, status })
 
       toast({
         title: t('successfullyUpdated'),
         variant: 'success',
       })
-
-      // Refresh the current page to show updated data
-      router.refresh()
     } catch (error) {
       toast({
         title: t('errorUpdating'),
         description: error instanceof Error ? error.message : t('unknownError'),
         variant: 'destructive',
       })
-    } finally {
-      setIsUpdating(false)
     }
   }
 
@@ -244,41 +376,21 @@ export function ServerScheduleTable({
   }
 
   // Handle delete job
-  async function handleDeleteJob() {
-    if (!jobToDelete) return
-
-    setIsDeleting(true)
+  async function handleDeleteJob(id: string) {
     try {
-      const response = await fetch(`/api/schedule/jobs/${jobToDelete}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        throw new Error(t('errorDeleting'))
-      }
+      await deleteJobMutation.mutateAsync(id)
 
       toast({
         title: t('successfullyDeleted'),
         variant: 'success',
       })
-
-      // Refresh the current page to show updated data
-      router.refresh()
     } catch (error) {
       toast({
         title: t('errorDeleting'),
         description: error instanceof Error ? error.message : t('unknownError'),
         variant: 'destructive',
       })
-    } finally {
-      setIsDeleting(false)
-      setJobToDelete(null)
     }
-  }
-
-  // If delete job is set, handle it
-  if (jobToDelete) {
-    handleDeleteJob()
   }
 
   return (
@@ -289,6 +401,7 @@ export function ServerScheduleTable({
       totalCount={totalCount}
       searchPlaceholder={t('searchJobs')}
       searchValue={searchValue}
+      // maxHeight='70vh'
     />
   )
 }

@@ -171,3 +171,54 @@
     border-radius: 20px;
   }
 }
+
+/* Thêm vào app/globals.css */
+@layer components {
+  .data-table-container {
+    @apply w-full overflow-x-auto;
+  }
+  
+  .fixed-header-table {
+    @apply relative border-separate border-spacing-0 w-full table-auto;
+  }
+  
+  .fixed-header {
+    @apply sticky top-0 z-10 bg-muted/80 backdrop-blur-sm;
+  }
+  
+  .fixed-header th {
+    @apply font-semibold text-foreground py-3 px-4 border-b-2 border-primary/20 bg-muted/90;
+  }
+  
+  .fixed-header th:first-child,
+  .table-body td:first-child {
+    @apply sticky left-0 z-20 bg-muted/95 backdrop-blur-sm;
+  }
+  
+  .fixed-data-wrapper {
+    @apply overflow-y-auto;
+  }
+  
+  .cell-truncate {
+    @apply truncate max-w-full block;
+  }
+  
+  /* Zebra striping for rows */
+  .table-body tr:nth-child(even) {
+    @apply bg-muted/30;
+  }
+  
+  .table-body tr:nth-child(odd) {
+    @apply bg-background;
+  }
+  
+  /* Ensure sticky elements have proper backdrop */
+  .table-body tr td:first-child {
+    @apply backdrop-blur-sm;
+  }
+  
+  /* Hover effect for rows */
+  .table-body tr:hover {
+    @apply bg-muted/50;
+  }
+}
