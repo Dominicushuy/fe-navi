@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FormEvent, useState, useEffect } from 'react'
-import { useAuth } from '@/contexts/auth-context'
+import { loginWithCredentials } from '@/actions/auth'
 import { DEFAULT_PAGE } from '@/constants/router'
 import { CassoLogo, CassoLoginButton } from './CassoComponents'
 
@@ -27,15 +27,13 @@ interface LoginFormProps {
 export default function LoginForm({ translations }: LoginFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login, isLoading, error: authError } = useAuth()
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isDevelopment, setIsDevelopment] = useState(false)
 
   // Check if we're in development environment
   useEffect(() => {
     // You can't directly access process.env.NODE_ENV in client components
-    // We'll use a simple check - in production, window.location should use https
-    // Alternatively, you could expose this via a runtime config
     setIsDevelopment(
       window.location.hostname === 'localhost' ||
         window.location.protocol === 'http:'
@@ -47,17 +45,32 @@ export default function LoginForm({ translations }: LoginFormProps) {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+    setIsLoading(true)
 
-    const form = e.currentTarget
-    const username = form.username.value
-    const password = form.password.value
+    const formData = new FormData(e.currentTarget)
+    formData.append('callbackUrl', callbackUrl)
 
-    if (!username || !password) {
-      setError('Username and password are required')
-      return
+    try {
+      // Direct server action call
+      const result = await loginWithCredentials(formData)
+
+      if (result.success) {
+        router.push(result.redirectUrl || `/${DEFAULT_PAGE}`)
+        router.refresh()
+      } else {
+        setError(result.error || 'Login failed')
+
+        // Handle redirect to Casso if needed
+        if (result.redirectUrl) {
+          window.location.href = result.redirectUrl
+        }
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      setError('An error occurred during login. Please try again.')
+    } finally {
+      setIsLoading(false)
     }
-
-    await login(username, password, callbackUrl)
   }
 
   return (
@@ -102,10 +115,8 @@ export default function LoginForm({ translations }: LoginFormProps) {
             </div>
           </div>
 
-          {(error || authError) && (
-            <p className='text-red-500 text-sm text-center mt-2'>
-              {error || authError}
-            </p>
+          {error && (
+            <p className='text-red-500 text-sm text-center mt-2'>{error}</p>
           )}
 
           <Button

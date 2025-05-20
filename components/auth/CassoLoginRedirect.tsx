@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/auth-context'
+import { loginWithCasso } from '@/actions/auth'
 import { CassoLogo } from './CassoComponents'
 
 interface CassoTranslations {
@@ -24,7 +24,6 @@ export default function CassoLoginRedirect({
   translations: CassoTranslations
 }) {
   const router = useRouter()
-  const { loginCasso, error: authError, isLoading: authLoading } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -37,21 +36,25 @@ export default function CassoLoginRedirect({
       }
 
       try {
-        const success = await loginCasso(employeeId, cassoToken)
+        // Direct server action call
+        const result = await loginWithCasso(employeeId, cassoToken)
 
-        if (!success) {
-          setError(authError || translations.loginError)
-          setIsLoading(false)
+        if (result.success) {
+          router.push(result.redirectUrl || '/')
+          router.refresh()
+        } else {
+          setError(result.error || translations.loginError)
         }
       } catch (error) {
         console.error('Casso login error:', error)
         setError(translations.loginError)
+      } finally {
         setIsLoading(false)
       }
     }
 
     handleCassoLogin()
-  }, [employeeId, cassoToken, loginCasso, authError, translations])
+  }, [employeeId, cassoToken, router, translations])
 
   return (
     <div className='flex flex-col items-center w-full'>

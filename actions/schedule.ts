@@ -3,6 +3,7 @@
 
 import { auth } from '@/lib/auth'
 import { revalidateTag } from 'next/cache'
+import { fetchPaginatedData } from './server-table'
 
 // Type definitions
 export interface ScheduledJob {
@@ -68,7 +69,7 @@ export interface ScheduledJobUpdate {
 }
 
 /**
- * Fetch scheduled jobs from the API
+ * Fetch scheduled jobs from the API with server-side pagination and search
  */
 export async function getScheduledJobs(
   jobType: 'NAVI' | 'CVER',
@@ -92,31 +93,12 @@ export async function getScheduledJobs(
     limit: limit.toString(),
   })
 
-  try {
-    const response = await fetch(`${apiUrl}?${queryParams.toString()}`, {
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${user.access}`,
-      },
-      next: {
-        tags: [`scheduledJobs-${jobType}`],
-        revalidate: 60, // Revalidate every 60 seconds
-      },
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error')
-      throw new Error(
-        `Error fetching scheduled jobs: ${response.status} ${errorText}`
-      )
-    }
-
-    return await response.json()
-  } catch (error) {
-    console.error('Failed to fetch scheduled jobs:', error)
-    throw error
-  }
+  return fetchPaginatedData<ScheduledJob>({
+    url: apiUrl,
+    queryParams,
+    tag: `scheduledJobs-${jobType}`,
+    revalidate: 60,
+  })
 }
 
 /**

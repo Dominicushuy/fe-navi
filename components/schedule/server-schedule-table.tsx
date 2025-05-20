@@ -1,11 +1,8 @@
-// components/schedule/schedule-table.tsx
+// components/schedule/server-schedule-table.tsx
 'use client'
 
-import { DataTable } from '@/components/tables/data-table'
 import { ColumnDef } from '@tanstack/react-table'
-import { useScheduledJobs } from '@/hooks/use-scheduled-jobs'
 import { ScheduledJob } from '@/actions/schedule'
-import { useScheduledJobMutations } from '@/hooks/use-scheduled-job-mutations'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Play, Pause, Trash2, Edit } from 'lucide-react'
@@ -20,6 +17,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { ServerDataTable } from '@/components/tables/server-data-table'
+import { toast } from '@/components/ui/toast'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 // Mapping for column keys to display names
 const columnMapping: Record<string, string> = {
@@ -68,25 +69,34 @@ const columnMapping: Record<string, string> = {
 
 export type JobType = 'NAVI' | 'CVER'
 
+interface ServerScheduleTableProps {
+  jobType: JobType
+  data: ScheduledJob[]
+  pagination: {
+    pageCount: number
+    page: number
+    limit: number
+  }
+  totalCount: number
+  searchValue: string
+}
+
 /**
- * Table component for displaying scheduled jobs based on job type
+ * Server-side rendered table component for displaying scheduled jobs
  */
-export function ScheduleTable({ jobType }: { jobType: JobType }) {
+export function ServerScheduleTable({
+  jobType,
+  data,
+  pagination,
+  totalCount,
+  searchValue,
+}: ServerScheduleTableProps) {
   const t = useTranslations('Schedule')
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    page,
-    setPage,
-    limit,
-    setLimit,
-    search,
-    setSearch,
-  } = useScheduledJobs(jobType)
-  const { updateJob, deleteJob, isUpdating, isDeleting } =
-    useScheduledJobMutations()
+  const router = useRouter()
+  const pathname = usePathname()
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [jobToDelete, setJobToDelete] = useState<string | null>(null)
 
   // Define the columns for the table
   const columns = getColumns()
@@ -142,10 +152,7 @@ export function ScheduleTable({ jobType }: { jobType: JobType }) {
               variant='outline'
               size='sm'
               onClick={() =>
-                updateJob({
-                  id: job.id,
-                  status: isActive ? 'INACTIVE' : 'ACTIVE',
-                })
+                handleUpdateJob(job.id, isActive ? 'INACTIVE' : 'ACTIVE')
               }
               disabled={isUpdating}
               title={isActive ? t('deactivateJob') : t('activateJob')}>
@@ -159,10 +166,7 @@ export function ScheduleTable({ jobType }: { jobType: JobType }) {
             <Button
               variant='outline'
               size='sm'
-              onClick={() => {
-                // You might want to navigate to an edit page or open a modal here
-                console.log('Edit job', job.id)
-              }}
+              onClick={() => handleEditJob(job.id)}
               title={t('editJob')}>
               <Edit className='h-4 w-4' />
             </Button>
@@ -185,7 +189,7 @@ export function ScheduleTable({ jobType }: { jobType: JobType }) {
                 <AlertDialogFooter>
                   <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() => deleteJob(job.id)}
+                    onClick={() => setJobToDelete(job.id)}
                     disabled={isDeleting}>
                     {t('delete')}
                   </AlertDialogAction>
@@ -200,36 +204,91 @@ export function ScheduleTable({ jobType }: { jobType: JobType }) {
     return [...baseColumns, actionsColumn]
   }
 
-  if (isError) {
-    return (
-      <div className='rounded-md bg-destructive/10 p-6 text-center'>
-        <h3 className='text-lg font-medium text-destructive mb-2'>
-          {t('errorFetchingData')}
-        </h3>
-        <p className='text-sm text-destructive/80 mb-4'>
-          {error instanceof Error ? error.message : t('unknownError')}
-        </p>
-        <Button variant='outline' onClick={() => window.location.reload()}>
-          {t('tryAgain')}
-        </Button>
-      </div>
-    )
+  // Handle update job status
+  async function handleUpdateJob(id: string, status: string) {
+    setIsUpdating(true)
+    try {
+      const response = await fetch(`/api/schedule/jobs/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      })
+
+      if (!response.ok) {
+        throw new Error(t('errorUpdating'))
+      }
+
+      toast({
+        title: t('successfullyUpdated'),
+        variant: 'success',
+      })
+
+      // Refresh the current page to show updated data
+      router.refresh()
+    } catch (error) {
+      toast({
+        title: t('errorUpdating'),
+        description: error instanceof Error ? error.message : t('unknownError'),
+        variant: 'destructive',
+      })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  // Handle edit job
+  function handleEditJob(id: string) {
+    // Navigate to edit page or show modal
+    console.log('Edit job', id)
+    // router.push(`/schedule/edit/${id}`)
+  }
+
+  // Handle delete job
+  async function handleDeleteJob() {
+    if (!jobToDelete) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/schedule/jobs/${jobToDelete}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error(t('errorDeleting'))
+      }
+
+      toast({
+        title: t('successfullyDeleted'),
+        variant: 'success',
+      })
+
+      // Refresh the current page to show updated data
+      router.refresh()
+    } catch (error) {
+      toast({
+        title: t('errorDeleting'),
+        description: error instanceof Error ? error.message : t('unknownError'),
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDeleting(false)
+      setJobToDelete(null)
+    }
+  }
+
+  // If delete job is set, handle it
+  if (jobToDelete) {
+    handleDeleteJob()
   }
 
   return (
-    <div className='space-y-4'>
-      {isLoading ? (
-        <div className='flex justify-center py-8'>
-          <div className='animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full'></div>
-        </div>
-      ) : (
-        <DataTable
-          columns={columns}
-          data={data?.results || []}
-          searchPlaceholder={t('searchJobs')}
-          searchColumn='job_name'
-        />
-      )}
-    </div>
+    <ServerDataTable
+      columns={columns}
+      data={data}
+      pagination={pagination}
+      totalCount={totalCount}
+      searchPlaceholder={t('searchJobs')}
+      searchValue={searchValue}
+    />
   )
 }
