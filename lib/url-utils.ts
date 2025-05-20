@@ -1,30 +1,10 @@
 // lib/url-utils.ts
-import { ReadonlyURLSearchParams } from 'next/navigation'
-
-/**
- * Creates a new URLSearchParams object with updated params
- */
-export function createQueryString(
-  searchParams: ReadonlyURLSearchParams,
-  params: Record<string, string | number | null | undefined>
-): string {
-  const newSearchParams = new URLSearchParams(searchParams.toString())
-
-  // Update search params with new values
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === null || value === undefined || value === '') {
-      newSearchParams.delete(key)
-    } else {
-      newSearchParams.set(key, String(value))
-    }
-  })
-
-  const queryString = newSearchParams.toString()
-  return queryString ? `?${queryString}` : ''
-}
-
 /**
  * Helper to get search param as number with fallback
+ * @param searchParams The search parameters object
+ * @param key The parameter key to retrieve
+ * @param fallback Default value if parameter is not found or invalid
+ * @returns Parsed numeric value or fallback
  */
 export function getNumericParam(
   searchParams: { [key: string]: string | string[] | undefined },
@@ -41,23 +21,41 @@ export function getNumericParam(
 }
 
 /**
- * Parse searchParams into table params object
+ * Parse searchParams into table params object for pagination and search
+ * @param searchParams The search parameters object
+ * @param defaults Default values
+ * @returns Structured pagination parameters
  */
-export function parseTableParams(searchParams: {
-  [key: string]: string | string[] | undefined
-}): {
+export function parseTableParams(
+  searchParams: { [key: string]: string | string[] | undefined },
+  defaults: { page?: number; limit?: number; search?: string } = {}
+): {
   page: number
   limit: number
   search: string
 } {
   return {
-    page: getNumericParam(searchParams, 'page', 1),
-    limit: getNumericParam(searchParams, 'limit', 20),
+    page: getNumericParam(searchParams, 'page', defaults.page || 1),
+    limit: getNumericParam(searchParams, 'limit', defaults.limit || 20),
     search:
       typeof searchParams.search === 'string'
         ? searchParams.search
         : Array.isArray(searchParams.search)
-        ? searchParams.search[0] || ''
-        : '',
+        ? searchParams.search[0] || defaults.search || ''
+        : defaults.search || '',
+  }
+}
+
+/**
+ * Create pagination params for API requests
+ * @param page Current page (1-based)
+ * @param limit Items per page
+ * @returns Object with pagination parameters
+ */
+export function createPaginationParams(page: number, limit: number) {
+  return {
+    page: Math.max(1, page),
+    limit: Math.max(1, limit),
+    offset: Math.max(0, (page - 1) * limit),
   }
 }
